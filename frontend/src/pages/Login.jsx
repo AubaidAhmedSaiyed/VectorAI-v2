@@ -14,6 +14,9 @@ function Login({ toggleTheme }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [toastMsg, setToastMsg] = useState("");
+  const [isError, setIsError] = useState(false);
+
   // ✅ CLEAR OLD SESSION ON PAGE LOAD (CORRECT USE OF useEffect)
   useEffect(() => {
     localStorage.removeItem("role");
@@ -39,7 +42,9 @@ function Login({ toggleTheme }) {
       // ✅ ROLE-BASED REDIRECT
       navigate(`/${role}/dashboard`);
     } catch (err) {
-      alert("Invalid email or password");
+      setIsError(true);
+      setToastMsg("Invalid email or password");
+      setTimeout(() => setToastMsg(""), 3000);
     } finally {
       setLoading(false);
     }
@@ -76,7 +81,7 @@ function Login({ toggleTheme }) {
               required
             />
 
-            <button type="submit" className="login-btn" disabled={loading}>
+            <button type="submit" className={`login-btn ${loading ? "btn-processing" : ""}`} disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
@@ -91,7 +96,9 @@ function Login({ toggleTheme }) {
                 navigate("/staff/dashboard");
               }}
               onError={() => {
-                alert("Google Login Failed");
+                setIsError(true);
+                setToastMsg("Google Login Failed");
+                setTimeout(() => setToastMsg(""), 3000);
               }}
             />
           </div>
@@ -101,6 +108,7 @@ function Login({ toggleTheme }) {
           </p>
         </div>
       </div>
+      {toastMsg && <div className={`toast-notification ${isError ? 'error' : ''}`}>{toastMsg}</div>}
     </>
   );
 }

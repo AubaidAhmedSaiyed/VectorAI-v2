@@ -12,7 +12,11 @@ import {
   TrendingUp,
   Boxes,
   BarChart3,
-  LayoutDashboard,
+  Bell,
+  CircleDollarSign,
+  Leaf,
+  Zap,
+  Radar
 } from "lucide-react";
 
 function Landing({ toggleTheme, theme }) {
@@ -21,6 +25,7 @@ function Landing({ toggleTheme, theme }) {
 
   /* ===== TYPING LOGIC ===== */
   const [typedText, setTypedText] = useState("");
+  const [activeFeature, setActiveFeature] = useState("Forecast");
 
   useEffect(() => {
     let index = 0;
@@ -29,8 +34,28 @@ function Landing({ toggleTheme, theme }) {
       index++;
       if (index === fullText.length) clearInterval(interval);
     }, 120);
-    return () => clearInterval(interval);
-  }, []);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            // Optional: observer.unobserve(entry.target) if you only want it to animate once
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    const elements = document.querySelectorAll(".reveal-on-scroll");
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      clearInterval(interval);
+      observer.disconnect();
+    };
+  }, [fullText]);
 
   /* ===== DEMO STOCK ===== */
   const demoStock = [
@@ -38,131 +63,32 @@ function Landing({ toggleTheme, theme }) {
     { name: "Chino Pants", quantity: 32, soldToday: 8, price: 799, cost: 560 },
   ];
 
-  return (
-    <div className="landing-page">
-      <Navbar toggleTheme={toggleTheme} />
+  const handleScroll = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-      {/* ================= HERO ================= */}
-      <section className="flickr-landing">
-        <div className="flickr-content">
-          <span className="hero-badge">{TAGLINE}</span>
-
-          <h1 className="flickr-title">
-            Retail Intelligence, Powered by{" "}
-            <span className="heading typing-text">{typedText}</span>
-          </h1>
-
-          <p className="hero-subtitle">
-            Predict demand. Reduce waste. Act with confidence.
-          </p>
-
-          <p className="flickr-support">
-            AI-powered retail intelligence that helps you sell smarter,
-            manage inventory better, and make faster decisions.
-          </p>
-
-          <div className="landing-cta">
-            <button className="cta-primary" onClick={() => navigate("/login")}>
-              Get Started
-            </button>
-            <button
-              className="cta-secondary"
-              onClick={() => navigate("/signup")}
-            >
-              View Demo
-            </button>
-          </div>
-
-          <div className="hero-trust">
-            <div className="trust-card">
-              <strong className="numeric">~30%</strong>
-              <span>Faster Billing</span>
+  const renderMockContent = () => {
+    switch (activeFeature) {
+      case "Forecast":
+        return (
+          <>
+            <div className="mock-content-header">
+              <h3>AI Demand Forecasting</h3>
+              <p>Predicted sales for the next 4 weeks based on historical data.</p>
             </div>
-            <div className="trust-card">
-              <strong className="numeric">~25%</strong>
-              <span>Fewer Errors</span>
+            <div style={{ height: '300px', width: '100%' }}>
+              <Analytics stock={demoStock} theme={theme} />
             </div>
-            <div className="trust-card">
-              <strong className="numeric">2×</strong>
-              <span>Sales Visibility</span>
+          </>
+        );
+      case "Smart Inventory":
+        return (
+          <>
+            <div className="mock-content-header">
+              <h3>Smart Inventory Mapping</h3>
+              <p>Real-time insights and automated bundle suggestions.</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= FEATURES ================= */}
-      <section className="section">
-        <h2 className="section-title">Key Features</h2>
-
-        <div className="card-grid">
-          <div className="info-card">
-            <TrendingUp size={26} className="feature-icon" />
-            <h3>AI Demand Forecasting</h3>
-            <p>Predict demand & avoid stockouts.</p>
-          </div>
-
-          <div className="info-card">
-            <Boxes size={26} className="feature-icon" />
-            <h3>Smart Inventory</h3>
-            <p>Real-time stock insights & alerts.</p>
-          </div>
-
-          <div className="info-card">
-            <BarChart3 size={26} className="feature-icon" />
-            <h3>Sales Analytics</h3>
-            <p>Turn sales data into decisions.</p>
-          </div>
-
-          <div className="info-card">
-            <LayoutDashboard size={26} className="feature-icon" />
-            <h3>Unified Dashboard</h3>
-            <p>Everything in one place.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= PRODUCT SHOWCASE ================= */}
-      <section className="section product-showcase">
-        <div className="showcase-grid">
-          <div className="showcase-left">
-            <h2 className="section-title">
-              Decisions powered by real retail data
-            </h2>
-
-            <p className="showcase-text">
-              Vector AI analyzes your sales and inventory to highlight
-              opportunities, reduce dead stock, and improve profitability —
-              without disrupting your workflow.
-            </p>
-
-            <ul className="showcase-points">
-              <li>✔ Detects slow-moving inventory</li>
-              <li>✔ Suggests smart bundle offers</li>
-              <li>✔ Enables faster data-backed actions</li>
-            </ul>
-
-            <div className="showcase-stats">
-              <div className="stat-card">
-                <strong className="numeric">~40%</strong>
-                <span>Faster Inventory Movement</span>
-              </div>
-              <div className="stat-card">
-                <strong className="numeric">~18%</strong>
-                <span>Revenue Growth</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="showcase-right">
-            <div className="dashboard-card">
-              <div className="chart-box landing-chart">
-                <Analytics stock={demoStock} theme={theme} />
-              </div>
-
-              <h4 className="dashboard-title">
-                Vector AI — Live Feature Preview
-              </h4>
-
+            <div className="mock-data-card">
               <div className="bundle-item">
                 <span>Men’s Cotton Shirt</span>
                 <span>
@@ -170,9 +96,7 @@ function Landing({ toggleTheme, theme }) {
                   <span className="numeric">599</span>
                 </span>
               </div>
-
               <div className="bundle-plus">+</div>
-
               <div className="bundle-item">
                 <span>Chino Pants</span>
                 <span>
@@ -180,7 +104,6 @@ function Landing({ toggleTheme, theme }) {
                   <span className="numeric">799</span>
                 </span>
               </div>
-
               <div className="bundle-result">
                 <strong>
                   Suggested Bundle: ₹
@@ -191,22 +114,160 @@ function Landing({ toggleTheme, theme }) {
                   <span className="numeric">45</span> bundles / month
                 </span>
               </div>
-
-              <div className="bundle-actions">
-                <button className="approve-btn">Apply in Dashboard</button>
-                <button className="ghost-btn">Review Logic</button>
-              </div>
-
-              <p className="demo-note">
-                Feature preview for demonstration only.
-              </p>
             </div>
+          </>
+        );
+      case "Sales Analytics":
+        return (
+          <>
+            <div className="mock-content-header">
+              <h3>Sales Analytics</h3>
+              <p>Track your revenue, profit margins, and top-performing products.</p>
+            </div>
+            <div className="mock-widget-placeholder">
+              [ Dynamic Sales Chart Placeholder ]
+            </div>
+          </>
+        );
+      case "Expiry Alerts":
+        return (
+          <>
+            <div className="mock-content-header">
+              <h3>Expiry Alerts</h3>
+              <p>Automatically detect soon-to-expire batches.</p>
+            </div>
+            <div className="alert animate-tagline">
+              ⚠️ Warning: 15 units of Organic Milk expiring in 3 days. Recommend 20% discount.
+            </div>
+            <div className="alert animate-support" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#fb923c' }}>
+              Notice: 40 units of Wheat Bread expiring in 7 days.
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="landing-page">
+      <Navbar toggleTheme={toggleTheme} />
+
+      {/* ================= HERO & DASHBOARD MOCKUP ================= */}
+      <section className="dashboard-hero-section">
+        {/* Soft animated background elements */}
+        <div className="hero-glow-blob"></div>
+        <div className="hero-glow-blob-alt"></div>
+
+        <div className="hero-text-content">
+          <span className="hero-badge animate-tagline">{TAGLINE}</span>
+
+          <h1 className="flickr-title animate-title">
+            Retail Intelligence, Powered by{" "}
+            <span className="heading typing-text">{typedText}</span>
+          </h1>
+
+          <p className="hero-subtitle animate-support">
+            Predict demand. Reduce waste. Act with confidence.
+          </p>
+
+          <p className="flickr-support animate-support">
+            AI-powered retail intelligence that helps you sell smarter,
+            manage inventory better, and make faster decisions.
+          </p>
+
+          <div className="landing-cta animate-cta">
+            <button className="cta-primary-large" onClick={() => navigate("/login")}>
+              Explore Dashboard
+            </button>
+            <button
+              className="ghost-btn-link"
+              onClick={() => handleScroll('features')}
+            >
+              Learn More
+            </button>
+          </div>
+        </div>
+
+        {/* Dashboard Mockup (based on sketch) */}
+        <div className="mock-dashboard-wrapper animate-cta">
+          {/* Left Sidebar */}
+          <div className="mock-sidebar">
+             <div className="mock-sidebar-title">Features</div>
+             
+             <div 
+               className={`mock-sidebar-item ${activeFeature === "Forecast" ? "active" : ""}`}
+               onClick={() => setActiveFeature("Forecast")}
+             >
+               <TrendingUp size={20} />
+               <span>Forecast</span>
+             </div>
+
+             <div 
+               className={`mock-sidebar-item ${activeFeature === "Smart Inventory" ? "active" : ""}`}
+               onClick={() => setActiveFeature("Smart Inventory")}
+             >
+               <Boxes size={20} />
+               <span>Smart Inventory</span>
+             </div>
+
+             <div 
+               className={`mock-sidebar-item ${activeFeature === "Sales Analytics" ? "active" : ""}`}
+               onClick={() => setActiveFeature("Sales Analytics")}
+             >
+               <BarChart3 size={20} />
+               <span>Sales Analytics</span>
+             </div>
+
+             <div 
+               className={`mock-sidebar-item ${activeFeature === "Expiry Alerts" ? "active" : ""}`}
+               onClick={() => setActiveFeature("Expiry Alerts")}
+             >
+               <Bell size={20} />
+               <span>Expiry Alerts</span>
+             </div>
+          </div>
+
+          {/* Right Main Content */}
+          <div className="mock-content">
+             {renderMockContent()}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= BENEFITS ================= */}
+      <section id="features" className="section reveal-on-scroll">
+        <h2 className="section-title">Drive Real Results</h2>
+
+        <div className="card-grid">
+          <div className="info-card">
+            <CircleDollarSign size={26} className="feature-icon" />
+            <h3>Increase Profit</h3>
+            <p>Optimize pricing and sell more at the right time.</p>
+          </div>
+
+          <div className="info-card">
+            <Leaf size={26} className="feature-icon" />
+            <h3>Reduce Stock Waste</h3>
+            <p>Clear expiring items before they become losses.</p>
+          </div>
+
+          <div className="info-card">
+            <Zap size={26} className="feature-icon" />
+            <h3>Faster Decisions</h3>
+            <p>Skip the spreadsheets. Get AI-backed insights instantly.</p>
+          </div>
+
+          <div className="info-card">
+            <Radar size={26} className="feature-icon" />
+            <h3>Always Up-to-Date</h3>
+            <p>Real-time alerts keep your team acting proactively.</p>
           </div>
         </div>
       </section>
 
       {/* ================= USERS ================= */}
-      <section className="section">
+      <section className="section alt-section reveal-on-scroll">
         <h2 className="section-title">Who Is It For?</h2>
 
         <div className="card-grid">
@@ -233,7 +294,7 @@ function Landing({ toggleTheme, theme }) {
       </section>
 
       {/* ================= ABOUT ================= */}
-      <section className="section alt-section">
+      <section className="section reveal-on-scroll">
         <h2 className="section-title">About Vector AI</h2>
 
         <div className="card-grid">
@@ -260,7 +321,7 @@ function Landing({ toggleTheme, theme }) {
       </section>
 
       {/* ================= CONTACT ================= */}
-      <section className="section contact-highlight">
+      <section id="contact" className="section contact-highlight reveal-on-scroll">
         <h2 className="section-title">Contact Us</h2>
 
         <p className="section-text">
@@ -274,6 +335,7 @@ function Landing({ toggleTheme, theme }) {
           <button type="submit">Send Message</button>
         </form>
       </section>
+      
       <Footer />
     </div>
   );
