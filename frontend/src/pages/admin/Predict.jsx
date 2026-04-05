@@ -187,20 +187,123 @@ function Predict({ toggleTheme, theme = "dark" }) {
     [textMain, textMuted, gridColor]
   );
 
+  const lineYAxisSuggestedMax = useMemo(() => {
+    const pred = payload?.prediction;
+    if (!pred?.forecast?.length) return undefined;
+    const nums = pred.forecast.map((p) => Number(p.forecast) || 0);
+    const base = pred.comparison?.baseline_forecast;
+    if (Array.isArray(base)) {
+      base.forEach((p) => nums.push(Number(p?.forecast) || 0));
+    }
+    const hi = Math.max(0, ...nums);
+    if (hi <= 0) return 8;
+    return Math.ceil(hi * 1.22 + 1);
+  }, [payload]);
+
+  const lineChartOptions = useMemo(
+    () => ({
+      ...chartOptions,
+      layout: {
+        padding: { left: 6, right: 14, top: 4, bottom: 10 },
+      },
+      plugins: {
+        ...chartOptions.plugins,
+        legend: {
+          position: "top",
+          align: "center",
+          labels: {
+            color: textMain,
+            font: { family: "'Poppins', sans-serif", size: 12 },
+            padding: 24,
+            boxWidth: 36,
+            boxHeight: 4,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          mode: "index",
+          intersect: false,
+          position: "nearest",
+          padding: 12,
+          caretPadding: 12,
+          caretSize: 6,
+        },
+      },
+      scales: {
+        x: {
+          offset: true,
+          ticks: {
+            color: textMuted,
+            maxRotation: 40,
+            minRotation: 0,
+            autoSkipPadding: 16,
+          },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: { color: textMuted, padding: 10 },
+          grid: { color: gridColor },
+          beginAtZero: true,
+          suggestedMax: lineYAxisSuggestedMax,
+          grace: "12%",
+        },
+      },
+    }),
+    [chartOptions, textMain, textMuted, gridColor, lineYAxisSuggestedMax]
+  );
+
   const barOptions = useMemo(
     () => ({
       ...chartOptions,
+      layout: {
+        padding: { left: 8, right: 12, top: 4, bottom: 8 },
+      },
+      datasets: {
+        bar: {
+          maxBarThickness: 56,
+          categoryPercentage: 0.45,
+          barPercentage: 0.72,
+        },
+      },
       plugins: {
         ...chartOptions.plugins,
+        legend: {
+          position: "top",
+          align: "center",
+          labels: {
+            color: textMain,
+            font: { family: "'Poppins', sans-serif", size: 12 },
+            padding: 22,
+            boxWidth: 14,
+            boxHeight: 14,
+          },
+        },
         title: {
           display: true,
           text: "Four-week total demand — smart vs simple plan",
           color: textMain,
           font: { size: 16, family: "'Poppins', sans-serif" },
         },
+        tooltip: {
+          mode: "index",
+          intersect: false,
+          padding: 12,
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: textMuted, padding: 8 },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: { color: textMuted, padding: 8 },
+          grid: { color: gridColor },
+          beginAtZero: true,
+          grace: "12%",
+        },
       },
     }),
-    [chartOptions, textMain]
+    [chartOptions, textMain, textMuted, gridColor]
   );
 
   const handleSubmit = async (e) => {
@@ -486,11 +589,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
                 {accLoading ? "Running backtest…" : "Run accuracy check"}
               </button>
             </div>
-            {accError && (
-              <p className="presentation-error" style={{ marginTop: 12, padding: 12, borderRadius: 8 }}>
-                {accError}
-              </p>
-            )}
+            {accError && <p className="presentation-inline-alert">{accError}</p>}
             {accuracy && (
               <div className="accuracy-results">
                 <p className="accuracy-summary">{accuracy.summary}</p>
@@ -525,7 +624,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
                   </div>
                 </div>
                 <h4 className="accuracy-table-title">Week by week</h4>
-                <div style={{ overflowX: "auto" }}>
+                <div className="presentation-table-scroll">
                   <table className="presentation-table accuracy-table">
                     <thead>
                       <tr>
@@ -657,7 +756,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
               {lineData && (
                 <div className="card presentation-chart-card">
                   <div className="chart-inner">
-                    <Line data={lineData} options={chartOptions} />
+                    <Line data={lineData} options={lineChartOptions} />
                   </div>
                 </div>
               )}
@@ -670,11 +769,11 @@ function Predict({ toggleTheme, theme = "dark" }) {
               )}
             </div>
 
-            <details className="card" style={{ marginTop: "1rem" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            <details className="card presentation-details">
+              <summary className="presentation-details-summary">
                 Technical details (costs, yearly demand, disclaimers)
               </summary>
-              <div className="presentation-insight-grid" style={{ marginTop: "1rem" }}>
+              <div className="presentation-insight-grid">
                 <div>
                   <h4>Behind the money hints</h4>
                   <ul className="presentation-list">
@@ -718,30 +817,18 @@ function Predict({ toggleTheme, theme = "dark" }) {
               </div>
             </details>
 
-            <details className="card" style={{ marginTop: "1rem" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            <details className="card presentation-details">
+              <summary className="presentation-details-summary">
                 Saved log (admin) · Log ID: {String(payload.logId)}
               </summary>
-              <p style={{ marginTop: 8, fontSize: 13, color: "var(--text-muted)" }}>
-                Stored in MongoDB collection <code>predictionlogs</code> for audit.
+              <p className="presentation-log-meta">
+                Stored in MongoDB collection <code className="presentation-code">predictionlogs</code> for audit.
               </p>
             </details>
 
-            <details className="card" style={{ marginTop: "1rem" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600 }}>Raw API response (JSON)</summary>
-              <pre
-                style={{
-                  marginTop: 12,
-                  padding: 12,
-                  overflow: "auto",
-                  maxHeight: 360,
-                  fontSize: 12,
-                  background: "var(--glass-bg)",
-                  borderRadius: 8,
-                }}
-              >
-                {JSON.stringify(payload, null, 2)}
-              </pre>
+            <details className="card presentation-details">
+              <summary className="presentation-details-summary">Raw API response (JSON)</summary>
+              <pre className="presentation-json-pre">{JSON.stringify(payload, null, 2)}</pre>
             </details>
           </>
         )}
