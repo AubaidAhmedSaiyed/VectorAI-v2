@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import Navbar from "../components/Navbar";
 import "../App.css";
 
 // ✅ API IMPORT
@@ -52,8 +51,6 @@ function Login({ toggleTheme }) {
 
   return (
     <>
-      <Navbar variant="minimal" toggleTheme={toggleTheme} />
-
       <div className="login-container">
         <div className="login-card glass">
           <h2>Login to Vector AI</h2>

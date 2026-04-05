@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../App.css";
-import Navbar from "../components/Navbar";
 
 // ✅ API IMPORT
 import { registerUser } from "../Api/Api";
@@ -42,8 +41,6 @@ const Signup = ({ toggleTheme }) => {
 
   return (
     <>
-      <Navbar variant="minimal" toggleTheme={toggleTheme} />
-
       <div className="login-container">
         <div className="login-card glass">
           <h2>Create Account</h2>

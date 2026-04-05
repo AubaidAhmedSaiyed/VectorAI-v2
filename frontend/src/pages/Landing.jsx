@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Analytics from "../components/Analytics";
+import SalesPredictionChart from "../components/SalesPredictionChart";
+import Forecast from "../components/Forecast";
 import Footer from "../components/Footer";
 import {
   BRAND_NAME,
@@ -16,7 +18,8 @@ import {
   CircleDollarSign,
   Leaf,
   Zap,
-  Radar
+  Radar,
+  Mail
 } from "lucide-react";
 
 function Landing({ toggleTheme, theme }) {
@@ -25,7 +28,7 @@ function Landing({ toggleTheme, theme }) {
 
   /* ===== TYPING LOGIC ===== */
   const [typedText, setTypedText] = useState("");
-  const [activeFeature, setActiveFeature] = useState("Forecast");
+  const [activeFeature, setActiveFeature] = useState("AI Prediction");
 
   useEffect(() => {
     let index = 0;
@@ -69,80 +72,87 @@ function Landing({ toggleTheme, theme }) {
 
   const renderMockContent = () => {
     switch (activeFeature) {
-      case "Forecast":
+      case "Sales Analysis":
         return (
-          <>
-            <div className="mock-content-header">
-              <h3>AI Demand Forecasting</h3>
-              <p>Predicted sales for the next 4 weeks based on historical data.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-header">
+              <div className="modern-feature-icon-wrapper"><TrendingUp size={24} /></div>
+              <div>
+                <h3 className="modern-feature-title">Sales Analysis</h3>
+                <p className="modern-feature-desc">Track your revenue and profit margins over time.</p>
+              </div>
             </div>
-            <div style={{ height: '300px', width: '100%' }}>
+            <div style={{ height: '200px', width: '100%', marginTop: '24px' }}>
               <Analytics stock={demoStock} theme={theme} />
             </div>
-          </>
+          </div>
         );
+
+      case "AI Prediction":
+        return <Forecast theme={theme} />;
       case "Smart Inventory":
         return (
-          <>
-            <div className="mock-content-header">
-              <h3>Smart Inventory Mapping</h3>
-              <p>Real-time insights and automated bundle suggestions.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-header">
+              <div className="modern-feature-icon-wrapper"><Boxes size={24} /></div>
+              <div>
+                <h3 className="modern-feature-title">Smart Inventory Mapping</h3>
+                <p className="modern-feature-desc">Real-time insights and automated bundle suggestions.</p>
+              </div>
             </div>
-            <div className="mock-data-card">
-              <div className="bundle-item">
-                <span>Men’s Cotton Shirt</span>
-                <span>
-                  <span className="numeric">48</span> units · ₹
+            <div className="mock-data-card" style={{ marginTop: '24px', background: 'var(--bg-main)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
+              <div className="bundle-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>Men’s Cotton Shirt</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  <span className="numeric" style={{ color: 'var(--accent)' }}>48</span> units · ₹
                   <span className="numeric">599</span>
                 </span>
               </div>
-              <div className="bundle-plus">+</div>
-              <div className="bundle-item">
-                <span>Chino Pants</span>
-                <span>
-                  <span className="numeric">32</span> units · ₹
+              <div className="bundle-plus" style={{ textAlign: 'center', margin: '10px 0', color: 'var(--text-muted)' }}>+</div>
+              <div className="bundle-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>Chino Pants</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  <span className="numeric" style={{ color: 'var(--accent)' }}>32</span> units · ₹
                   <span className="numeric">799</span>
                 </span>
               </div>
-              <div className="bundle-result">
-                <strong>
-                  Suggested Bundle: ₹
-                  <span className="numeric">899</span>
+              <div className="bundle-result" style={{ marginTop: '20px', padding: '16px', background: 'var(--accent-glow-secondary)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ color: 'var(--accent-strong)' }}>
+                  Suggested Bundle: ₹<span className="numeric">899</span>
                 </strong>
-                <span>
-                  Estimated clearance:{" "}
-                  <span className="numeric">45</span> bundles / month
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Clearance rate: <span className="numeric" style={{ color: 'var(--accent)' }}>+45%</span>
                 </span>
               </div>
             </div>
-          </>
+          </div>
         );
-      case "Sales Analytics":
-        return (
-          <>
-            <div className="mock-content-header">
-              <h3>Sales Analytics</h3>
-              <p>Track your revenue, profit margins, and top-performing products.</p>
-            </div>
-            <div className="mock-widget-placeholder">
-              [ Dynamic Sales Chart Placeholder ]
-            </div>
-          </>
-        );
+
       case "Expiry Alerts":
         return (
-          <>
-            <div className="mock-content-header">
-              <h3>Expiry Alerts</h3>
-              <p>Automatically detect soon-to-expire batches.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-header">
+              <div className="modern-feature-icon-wrapper" style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)' }}><Bell size={24} /></div>
+              <div>
+                <h3 className="modern-feature-title">Expiry Alerts</h3>
+                <p className="modern-feature-desc">Automatically detect soon-to-expire batches.</p>
+              </div>
             </div>
-            <div className="alert animate-tagline">
-              ⚠️ Warning: 15 units of Organic Milk expiring in 3 days. Recommend 20% discount.
+            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="alert animate-tagline" style={{ padding: '16px', borderRadius: '12px', background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.2rem' }}>⚠️</span> 
+                <div>
+                    <strong>Critical:</strong> 15 units of Organic Milk expiring in 3 days. <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>Apply 20% discount</span>.
+                </div>
+              </div>
+              <div className="alert animate-support" style={{ padding: '16px', borderRadius: '12px', background: 'rgba(251, 146, 60, 0.1)', color: '#fb923c', border: '1px solid rgba(251, 146, 60, 0.2)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.2rem' }}>🔔</span> 
+                <div>
+                    <strong>Notice:</strong> 40 units of Wheat Bread expiring in 7 days.
+                </div>
+              </div>
             </div>
-            <div className="alert animate-support" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#fb923c' }}>
-              Notice: 40 units of Wheat Bread expiring in 7 days.
-            </div>
-          </>
+          </div>
         );
       default:
         return null;
@@ -154,12 +164,12 @@ function Landing({ toggleTheme, theme }) {
       <Navbar toggleTheme={toggleTheme} />
 
       {/* ================= HERO & DASHBOARD MOCKUP ================= */}
-      <section className="dashboard-hero-section">
+      <section className="dashboard-hero-section modern-hero">
         {/* Soft animated background elements */}
         <div className="hero-glow-blob"></div>
         <div className="hero-glow-blob-alt"></div>
 
-        <div className="hero-text-content">
+        <div className="hero-text-content modern-hero-text">
           <span className="hero-badge animate-tagline">{TAGLINE}</span>
 
           <h1 className="flickr-title animate-title">
@@ -177,7 +187,7 @@ function Landing({ toggleTheme, theme }) {
           </p>
 
           <div className="landing-cta animate-cta">
-            <button className="cta-primary-large" onClick={() => navigate("/login")}>
+            <button className="cta-primary-large cta-primary" onClick={() => navigate("/login")}>
               Explore Dashboard
             </button>
             <button
@@ -190,21 +200,29 @@ function Landing({ toggleTheme, theme }) {
         </div>
 
         {/* Dashboard Mockup (based on sketch) */}
-        <div className="mock-dashboard-wrapper animate-cta">
+        <div className="mock-dashboard-wrapper modern-dashboard animate-cta">
           {/* Left Sidebar */}
-          <div className="mock-sidebar">
-             <div className="mock-sidebar-title">Features</div>
+          <div className="mock-sidebar modern-sidebar">
+             <div className="mock-sidebar-title" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', margin: '10px 0 20px 14px', fontWeight: 600 }}>Dashboard Features</div>
              
              <div 
-               className={`mock-sidebar-item ${activeFeature === "Forecast" ? "active" : ""}`}
-               onClick={() => setActiveFeature("Forecast")}
+               className={`modern-sidebar-item ${activeFeature === "AI Prediction" ? "active" : ""}`}
+               onClick={() => setActiveFeature("AI Prediction")}
              >
-               <TrendingUp size={20} />
-               <span>Forecast</span>
+               <Radar size={20} />
+               <span>AI Prediction</span>
              </div>
 
              <div 
-               className={`mock-sidebar-item ${activeFeature === "Smart Inventory" ? "active" : ""}`}
+               className={`modern-sidebar-item ${activeFeature === "Sales Analysis" ? "active" : ""}`}
+               onClick={() => setActiveFeature("Sales Analysis")}
+             >
+               <TrendingUp size={20} />
+               <span>Sales Analysis</span>
+             </div>
+
+             <div 
+               className={`modern-sidebar-item ${activeFeature === "Smart Inventory" ? "active" : ""}`}
                onClick={() => setActiveFeature("Smart Inventory")}
              >
                <Boxes size={20} />
@@ -212,15 +230,7 @@ function Landing({ toggleTheme, theme }) {
              </div>
 
              <div 
-               className={`mock-sidebar-item ${activeFeature === "Sales Analytics" ? "active" : ""}`}
-               onClick={() => setActiveFeature("Sales Analytics")}
-             >
-               <BarChart3 size={20} />
-               <span>Sales Analytics</span>
-             </div>
-
-             <div 
-               className={`mock-sidebar-item ${activeFeature === "Expiry Alerts" ? "active" : ""}`}
+               className={`modern-sidebar-item ${activeFeature === "Expiry Alerts" ? "active" : ""}`}
                onClick={() => setActiveFeature("Expiry Alerts")}
              >
                <Bell size={20} />
@@ -229,7 +239,7 @@ function Landing({ toggleTheme, theme }) {
           </div>
 
           {/* Right Main Content */}
-          <div className="mock-content">
+          <div className="mock-content modern-content">
              {renderMockContent()}
           </div>
         </div>
@@ -239,29 +249,29 @@ function Landing({ toggleTheme, theme }) {
       <section id="features" className="section reveal-on-scroll">
         <h2 className="section-title">Drive Real Results</h2>
 
-        <div className="card-grid">
-          <div className="info-card">
-            <CircleDollarSign size={26} className="feature-icon" />
-            <h3>Increase Profit</h3>
-            <p>Optimize pricing and sell more at the right time.</p>
+        <div className="modern-card-grid">
+          <div className="modern-feature-card">
+            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><CircleDollarSign size={26} /></div>
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Increase Profit</h3>
+            <p className="modern-feature-desc">Optimize pricing and sell more at the right time.</p>
           </div>
 
-          <div className="info-card">
-            <Leaf size={26} className="feature-icon" />
-            <h3>Reduce Stock Waste</h3>
-            <p>Clear expiring items before they become losses.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Leaf size={26} /></div>
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Reduce Stock Waste</h3>
+            <p className="modern-feature-desc">Clear expiring items before they become losses.</p>
           </div>
 
-          <div className="info-card">
-            <Zap size={26} className="feature-icon" />
-            <h3>Faster Decisions</h3>
-            <p>Skip the spreadsheets. Get AI-backed insights instantly.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Zap size={26} /></div>
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Faster Decisions</h3>
+            <p className="modern-feature-desc">Skip the spreadsheets. Get AI-backed insights instantly.</p>
           </div>
 
-          <div className="info-card">
-            <Radar size={26} className="feature-icon" />
-            <h3>Always Up-to-Date</h3>
-            <p>Real-time alerts keep your team acting proactively.</p>
+          <div className="modern-feature-card">
+            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Radar size={26} /></div>
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Always Up-to-Date</h3>
+            <p className="modern-feature-desc">Real-time alerts keep your team acting proactively.</p>
           </div>
         </div>
       </section>
@@ -270,25 +280,25 @@ function Landing({ toggleTheme, theme }) {
       <section className="section alt-section reveal-on-scroll">
         <h2 className="section-title">Who Is It For?</h2>
 
-        <div className="card-grid">
-          <div className="info-card">
-            <h3>Shop Owners</h3>
-            <p>Complete visibility over sales & stock.</p>
+        <div className="modern-card-grid">
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Shop Owners</h3>
+            <p className="modern-feature-desc">Complete visibility over sales & stock.</p>
           </div>
 
-          <div className="info-card">
-            <h3>Store Staff</h3>
-            <p>Faster billing with fewer mistakes.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Store Staff</h3>
+            <p className="modern-feature-desc">Faster billing with fewer mistakes.</p>
           </div>
 
-          <div className="info-card">
-            <h3>Managers</h3>
-            <p>Real-time performance tracking.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Managers</h3>
+            <p className="modern-feature-desc">Real-time performance tracking.</p>
           </div>
 
-          <div className="info-card">
-            <h3>Business Owners</h3>
-            <p>Monitor growth across locations.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Business Owners</h3>
+            <p className="modern-feature-desc">Monitor growth across locations.</p>
           </div>
         </div>
       </section>
@@ -297,43 +307,48 @@ function Landing({ toggleTheme, theme }) {
       <section className="section reveal-on-scroll">
         <h2 className="section-title">About Vector AI</h2>
 
-        <div className="card-grid">
-          <div className="info-card">
-            <h3>What We Do</h3>
-            <p>{BRAND_DESCRIPTION}</p>
+        <div className="modern-card-grid">
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>What We Do</h3>
+            <p className="modern-feature-desc">{BRAND_DESCRIPTION}</p>
           </div>
 
-          <div className="info-card">
-            <h3>Why We Exist</h3>
-            <p>To replace guesswork with intelligence.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Why We Exist</h3>
+            <p className="modern-feature-desc">To replace guesswork with intelligence.</p>
           </div>
 
-          <div className="info-card">
-            <h3>Our Vision</h3>
-            <p>Enterprise-grade tools for every retailer.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Our Vision</h3>
+            <p className="modern-feature-desc">Enterprise-grade tools for every retailer.</p>
           </div>
 
-          <div className="info-card">
-            <h3>How It Works</h3>
-            <p>Sales + Inventory → Insights → Action.</p>
+          <div className="modern-feature-card">
+            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>How It Works</h3>
+            <p className="modern-feature-desc">Sales + Inventory → Insights → Action.</p>
           </div>
         </div>
       </section>
 
       {/* ================= CONTACT ================= */}
       <section id="contact" className="section contact-highlight reveal-on-scroll">
-        <h2 className="section-title">Contact Us</h2>
+        <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+          <Mail size={32} style={{ color: 'var(--accent)' }}/>
+          Contact Us
+        </h2>
 
         <p className="section-text">
           Want to explore Vector AI for your business?
         </p>
 
-        <form className="contact-form">
-          <input type="text" placeholder="Your Name" />
-          <input type="email" placeholder="Your Email" />
-          <textarea placeholder="Your Message"></textarea>
-          <button type="submit">Send Message</button>
-        </form>
+        <div className="modern-contact-card">
+          <form className="contact-form">
+            <input type="text" placeholder="Your Name" />
+            <input type="email" placeholder="Your Email" />
+            <textarea placeholder="Your Message"></textarea>
+            <button type="submit">Send Message</button>
+          </form>
+        </div>
       </section>
       
       <Footer />

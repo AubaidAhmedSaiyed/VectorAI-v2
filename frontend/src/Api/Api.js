@@ -18,6 +18,24 @@ export const loginUser = async (email, password) => {
   throw new Error("Invalid credentials");
 };
 
+// Register user
+export const registerUser = async (email, password, role) => {
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password, role }),
+    });
+
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
 
 /* ================= STOCK ================= */
 

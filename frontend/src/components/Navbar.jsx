@@ -26,7 +26,7 @@ const Navbar = ({ toggleTheme, variant }) => {
   };
 
   return (
-    <header className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
+    <header className={`navbar modern-navbar-enhanced ${isScrolled ? 'scrolled' : ''}`}>
       {/* Left: Brand */}
       <div
         className="nav-left"
@@ -62,7 +62,7 @@ const Navbar = ({ toggleTheme, variant }) => {
           Login
         </button>
 
-        <button className="nav-primary-btn" onClick={() => navigate("/signup")}>
+        <button className="nav-primary-btn cta-primary" onClick={() => navigate("/signup")}>
           Sign Up
         </button>
       </div>

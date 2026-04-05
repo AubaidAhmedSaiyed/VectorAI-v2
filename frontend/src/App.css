@@ -4,9 +4,9 @@
 :root {
   /* ===== DARK THEME VARIABLES (DEFAULT) ===== */
   /* Backgrounds */
-  --bg-main: #020617;
-  --bg-surface: #0b1225;
-  --bg-surface-alt: #0b1020;
+  --bg-main: #060b1b;
+  --bg-surface: #10162a;
+  --bg-surface-alt: #0d1222;
   /* Navbar/Sidebar */
   /* Gradients */
   --bg-gradient-start: #0b1225;
@@ -394,14 +394,16 @@ body {
 
 /* ================= LOGIN PAGE ================= */
 .login-container {
-  min-height: calc(100vh - 72px);
+  min-height: 100vh;
+  padding: 24px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .login-card {
-  width: 420px;
+  width: 100%;
+  max-width: 480px;
   padding: 46px;
   border-radius: 22px;
   background: linear-gradient(180deg, var(--card-gradient-start), var(--card-gradient-end));
@@ -452,7 +454,7 @@ body {
 
 /* Login button */
 .login-btn {
-  width: 450px;
+  width: 100%;
   height: 50px;
   border-radius: 14px;
   background: linear-gradient(50deg, var(--accent), var(--accent-strong));
