@@ -1,6 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
+import "../../App.css";
 
 const StaffReports = () => {
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleGenerateReport = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setCompleted(true);
+      setToastMsg("Shift report generated safely.");
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
+
   return (
     <div className="container">
       <div className="card">
@@ -26,11 +41,16 @@ const StaffReports = () => {
         </table>
 
         <div style={{ marginTop: "20px" }}>
-          <button className="approve-btn">
-            Generate & Send to Admin
+          <button 
+            className={`approve-btn ${loading ? "btn-processing" : ""}`}
+            onClick={handleGenerateReport}
+            disabled={loading || completed}
+          >
+            {completed ? "Receipt Generated ✓" : "Generate Report"}
           </button>
         </div>
       </div>
+      {toastMsg && <div className="toast-notification">{toastMsg}</div>}
     </div>
   );
 };

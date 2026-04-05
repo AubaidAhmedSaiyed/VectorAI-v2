@@ -1,8 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardNavbar from "../../components/DashboardNavbar";
 
 function Intelligence({ toggleTheme }) {
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleMarkClearance = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setCompleted(true);
+      setToastMsg("Items successfully moved to clearance!");
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
+
   return (
     <>
       <DashboardNavbar toggleTheme={toggleTheme} />
@@ -50,13 +64,19 @@ function Intelligence({ toggleTheme }) {
           </table>
 
           <div style={{ marginTop: "20px" }}>
-            <button className="approve-btn">
-              Mark for Clearance Sale
+            <button
+              className={`approve-btn ${loading ? "btn-processing" : ""}`}
+              onClick={handleMarkClearance}
+              disabled={loading || completed}
+            >
+              {completed ? "Marked for Sale ✓" : "Mark for Clearance Sale"}
             </button>
           </div>
         </div>
 
       </div>
+
+      {toastMsg && <div className="toast-notification">{toastMsg}</div>}
     </>
   );
 }

@@ -1,6 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import "../../App.css";
+
 const StaffOrders = () => {
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleSubmitAudit = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setCompleted(true);
+      setToastMsg("Physical audit logs submitted successfully!");
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
+
   return (
     <div className="container">
       <div className="card">
@@ -29,11 +44,16 @@ const StaffOrders = () => {
         </table>
 
         <div style={{ marginTop: "20px" }}>
-          <button className="approve-btn">
-            Submit Audit
+          <button 
+            className={`approve-btn ${loading ? "btn-processing" : ""}`}
+            onClick={handleSubmitAudit}
+            disabled={loading || completed}
+          >
+            {completed ? "Audit Submitted ✓" : "Submit Audit"}
           </button>
         </div>
       </div>
+      {toastMsg && <div className="toast-notification">{toastMsg}</div>}
     </div>
   );
 };

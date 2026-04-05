@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardNavbar from "../../components/DashboardNavbar";
 import Analytics from "../../components/Analytics";
-import InventoryBar from "../../components/InventoryBar";
+import SalesPredictionChart from "../../components/SalesPredictionChart";
 
 const demoStock = [
   { name: "Milk", quantity: 20, soldToday: 8, price: 50, cost: 30 },
@@ -80,8 +80,8 @@ function AdminDashboard({ toggleTheme }) {
             <Analytics stock={demoStock} toggleTheme={toggleTheme} />
           </div>
           <div className="card">
-            <h3>Inventory Health</h3>
-            <InventoryBar stock={demoStock} toggleTheme={toggleTheme} />
+            <h3>AI Sales Prediction</h3>
+            <SalesPredictionChart theme="dark" />
           </div>
         </div>
         {/* CSV UPLOAD */}
