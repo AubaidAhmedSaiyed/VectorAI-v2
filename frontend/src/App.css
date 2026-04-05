@@ -1733,3 +1733,288 @@ table tr:last-child td:last-child {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow-primary);
 }
+
+/* ========== Presentation / college demo ========== */
+.presentation-wrap {
+  padding-bottom: 3rem;
+}
+
+.presentation-hero {
+  margin-bottom: 1.25rem;
+  padding: 1.75rem 1.5rem;
+  background: linear-gradient(
+    135deg,
+    var(--card-gradient-start),
+    var(--card-gradient-end)
+  );
+  border: 1px solid var(--accent-border);
+}
+
+.presentation-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.presentation-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: var(--font-text);
+}
+
+.presentation-sub {
+  margin: 0;
+  max-width: 52rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.presentation-form-card h3 {
+  margin-top: 0;
+  color: var(--text-main);
+}
+
+.presentation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.presentation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.presentation-form label,
+.presentation-json-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.presentation-form input,
+.presentation-form textarea {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-alt);
+  color: var(--text-main);
+  font-family: var(--font-text);
+}
+
+.presentation-form textarea {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  min-height: 140px;
+  resize: vertical;
+}
+
+.presentation-cta {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.presentation-error {
+  border-color: var(--status-danger-text);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+  margin-bottom: 1rem;
+}
+
+.presentation-banner {
+  margin-bottom: 1rem;
+  border-color: var(--accent-border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.presentation-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.presentation-kpi {
+  text-align: center;
+  padding: 1.25rem 1rem;
+}
+
+.presentation-kpi.kpi-accent {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 24px var(--accent-glow-primary);
+}
+
+.kpi-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.kpi-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-numeric);
+  color: var(--accent-strong);
+}
+
+.kpi-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.presentation-chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 960px) {
+  .presentation-chart-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+}
+
+.presentation-chart-card .chart-inner {
+  height: 320px;
+  position: relative;
+}
+
+.presentation-chart-card .chart-inner-bar {
+  height: 280px;
+}
+
+.presentation-insight-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 800px) {
+  .presentation-insight-grid {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+.presentation-insight-grid h4 {
+  margin: 0 0 0.75rem;
+  color: var(--text-main);
+}
+
+.presentation-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.presentation-disclaimer {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.presentation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.presentation-table td {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.presentation-table td:first-child {
+  color: var(--text-muted);
+}
+
+.presentation-insight-grid .log-id {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Retailer-friendly prediction copy */
+.retailer-plain-card {
+  border: 1px solid var(--accent-border);
+  background: linear-gradient(
+    165deg,
+    var(--card-gradient-start),
+    rgba(46, 196, 182, 0.06)
+  );
+  margin-bottom: 1.25rem;
+}
+
+.retailer-plain-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.retailer-plain-lead {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.retailer-plain-p {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.retailer-plain-highlight {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-medium);
+}
+
+.retailer-actions-heading {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 1.05rem;
+  color: var(--accent-strong);
+}
+
+.retailer-action-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.retailer-action-list li {
+  margin-bottom: 0.65rem;
+}
+
+.retailer-mini-note {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}

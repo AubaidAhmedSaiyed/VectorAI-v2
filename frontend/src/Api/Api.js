@@ -3,6 +3,60 @@
 // 🔹 BASE CONFIG (future backend)
 const BASE_URL = "http://localhost:5000/api"; // future use
 
+/**
+ * In dev, default to same-origin "" so requests hit Vite's /api proxy (→ Express :5000).
+ * Set VITE_API_URL in .env when the API is on another host (production).
+ */
+function apiOrigin() {
+  const fromEnv = import.meta.env.VITE_API_URL;
+  if (fromEnv && String(fromEnv).trim()) return String(fromEnv).replace(/\/$/, "");
+  if (import.meta.env.DEV) return "";
+  return typeof window !== "undefined" ? window.location.origin : "http://localhost:5000";
+}
+
+function apiUrl(path) {
+  const root = apiOrigin();
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return root ? `${root}${p}` : p;
+}
+
+/**
+ * Demand prediction: Node → Python → MongoDB log (+ optional EOQ / demo economics).
+ * @param {{ store_id: string, sku_id: string, data: Array<{date: string, sku_id: string, sales: number}>, ordering_cost?: number, holding_cost?: number, unit_margin?: number }} body
+ */
+export const submitPrediction = async (body) => {
+  let res;
+  try {
+    res = await fetch(apiUrl("/api/predict"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    const base =
+      import.meta.env.DEV
+        ? "Is the backend running? From project root: cd backend && npm start (port 5000). MongoDB must be up (MONGO_URI in backend/.env)."
+        : "Set VITE_API_URL to your API base URL and ensure the server is reachable.";
+    throw new Error(
+      `Could not reach API (${e?.name || "NetworkError"}: ${e?.message || "fetch failed"}). ${base}`
+    );
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (import.meta.env.DEV && [502, 503, 504].includes(res.status)) {
+      throw new Error(
+        `API not reachable (HTTP ${res.status}). Run the backend: cd backend && npm start — port 5000. Check MONGO_URI and that MongoDB is running.`
+      );
+    }
+    const msg =
+      data.detail ||
+      data.message ||
+      (Array.isArray(data.errors) ? data.errors.join("; ") : res.statusText);
+    throw new Error(msg || `Request failed (${res.status})`);
+  }
+  return data;
+};
+
 /* ================= AUTH ================= */
 
 // Demo login (email/password)

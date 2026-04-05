@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import DashboardNavbar from "../../components/DashboardNavbar";
 
 function Intelligence({ toggleTheme }) {
@@ -7,6 +8,16 @@ function Intelligence({ toggleTheme }) {
       <DashboardNavbar toggleTheme={toggleTheme} />
 
       <div className="container">
+        <div className="card" style={{ marginBottom: "1rem" }}>
+          <h3>Demand forecast &amp; shop advice (admin)</h3>
+          <p style={{ marginBottom: "12px", color: "var(--text-muted)" }}>
+            Plain-language stock and order tips, charts, and optional technical detail — logged in{" "}
+            <code>predictionlogs</code>.
+          </p>
+          <Link className="approve-btn" to="/admin/predict" style={{ display: "inline-block", textDecoration: "none" }}>
+            Open forecast &amp; advice
+          </Link>
+        </div>
 
         {/* Expiry Risk */}
         <div className="card">
