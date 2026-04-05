@@ -9,6 +9,7 @@ const ML_URL = process.env.ML_ENGINE_URL || "http://localhost:8000";
 const TRAIN_TIMEOUT = 5 * 60 * 1000;
 const FORECAST_TIMEOUT = 30 * 1000;
 const PREDICT_TIMEOUT = 30 * 1000;
+const ACCURACY_TIMEOUT = 45 * 1000;
 const HEALTH_TIMEOUT = 5000;
 
 /**
@@ -99,4 +100,18 @@ async function predictDemand(payload) {
   });
 }
 
-module.exports = { trainModels, getForecast, healthCheck, predictDemand };
+async function predictAccuracy(payload) {
+  return fetchJson(`${ML_URL}/predict/accuracy`, {
+    method: "POST",
+    body: payload,
+    timeoutMs: ACCURACY_TIMEOUT,
+  });
+}
+
+module.exports = {
+  trainModels,
+  getForecast,
+  healthCheck,
+  predictDemand,
+  predictAccuracy,
+};

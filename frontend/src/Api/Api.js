@@ -57,6 +57,59 @@ export const submitPrediction = async (body) => {
   return data;
 };
 
+/**
+ * Hold-out backtest: hide last N weeks, forecast from prior data, return MAE / RMSE / MAPE (%).
+ * Body same as submitPrediction plus optional holdout_weeks (1–12, default 4).
+ */
+export const checkPredictionAccuracy = async (body) => {
+  let res;
+  try {
+    res = await fetch(apiUrl("/api/predict/accuracy"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(
+      `${e?.message || "fetch failed"} ${import.meta.env.DEV ? "Is the backend running?" : ""}`
+    );
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data.detail || data.message || res.statusText;
+    throw new Error(
+      typeof msg === "string" ? msg : JSON.stringify(msg) || `Request failed (${res.status})`
+    );
+  }
+  return data;
+};
+
+/**
+ * Load historical sold quantities from MongoDB (Sale + Product) for the given store/SKU.
+ * Same records as manual/CSV sales entry — used as input signals for demand forecasting.
+ */
+export const fetchDemandHistoryFromDb = async (storeId, sku) => {
+  const q = new URLSearchParams({ sku: String(sku).trim() });
+  let res;
+  try {
+    res = await fetch(
+      apiUrl(`/api/predict/history/${encodeURIComponent(String(storeId).trim())}?${q}`),
+      { method: "GET" }
+    );
+  } catch (e) {
+    const base =
+      import.meta.env.DEV
+        ? "Is the backend running (cd backend && npm start)?"
+        : "Check VITE_API_URL and network.";
+    throw new Error(`${e?.message || "fetch failed"} ${base}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || res.statusText || `Request failed (${res.status})`);
+  }
+  return data;
+};
+
 /* ================= AUTH ================= */
 
 // Demo login (email/password)

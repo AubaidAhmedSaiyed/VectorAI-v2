@@ -13,7 +13,11 @@ import {
 } from "chart.js";
 import { Line, Bar } from "react-chartjs-2";
 import DashboardNavbar from "../../components/DashboardNavbar";
-import { submitPrediction } from "../../Api/Api";
+import {
+  submitPrediction,
+  fetchDemandHistoryFromDb,
+  checkPredictionAccuracy,
+} from "../../Api/Api";
 
 ChartJS.register(
   CategoryScale,
@@ -114,7 +118,7 @@ function getRetailerGuidance(prediction, insights, skuDisplay) {
   if (actions.length === 0 && skuDisplay) {
     actions.push({
       title: "Keep reviewing",
-      text: `After festivals, price changes, or new competition, paste fresh sales here and run again.`,
+      text: `After festivals or price changes, load fresh history from the database or paste updated rows, then run again.`,
     });
   }
 
@@ -141,8 +145,13 @@ function Predict({ toggleTheme, theme = "dark" }) {
   const [holdingCost, setHoldingCost] = useState("");
   const [unitMargin, setUnitMargin] = useState("15");
   const [loading, setLoading] = useState(false);
+  const [loadDbLoading, setLoadDbLoading] = useState(false);
   const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
+  const [holdoutWeeks, setHoldoutWeeks] = useState("4");
+  const [accuracy, setAccuracy] = useState(null);
+  const [accLoading, setAccLoading] = useState(false);
+  const [accError, setAccError] = useState("");
 
   const isLight = theme === "light";
   const textMuted = isLight ? "#64748b" : "#94a3b8";
@@ -160,7 +169,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
         },
         title: {
           display: true,
-          text: "Next 4 weeks — units you may sell",
+          text: "Next 4 weeks — forecast demand (units)",
           color: textMain,
           font: { size: 16, family: "'Poppins', sans-serif" },
         },
@@ -185,7 +194,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
         ...chartOptions.plugins,
         title: {
           display: true,
-          text: "Four-week total — smart plan vs copy-last-week",
+          text: "Four-week total demand — smart vs simple plan",
           color: textMain,
           font: { size: 16, family: "'Poppins', sans-serif" },
         },
@@ -198,16 +207,18 @@ function Predict({ toggleTheme, theme = "dark" }) {
     e.preventDefault();
     setError("");
     setPayload(null);
+    setAccuracy(null);
+    setAccError("");
 
     let data;
     try {
       data = JSON.parse(dataJson);
     } catch {
-      setError("Sales data must be valid JSON array.");
+      setError("History must be valid JSON array (date, sku_id, sales).");
       return;
     }
     if (!Array.isArray(data) || data.length === 0) {
-      setError("Sales data must be a non-empty JSON array.");
+      setError("Load from database or paste a non-empty history array.");
       return;
     }
 
@@ -226,6 +237,56 @@ function Predict({ toggleTheme, theme = "dark" }) {
       setError(err.message || "Request failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadFromMongo = async () => {
+    setError("");
+    setPayload(null);
+    setAccuracy(null);
+    setAccError("");
+    setLoadDbLoading(true);
+    try {
+      const res = await fetchDemandHistoryFromDb(storeId.trim(), skuId.trim());
+      setDataJson(JSON.stringify(res.data, null, 2));
+    } catch (err) {
+      setError(err.message || "Could not load from database");
+    } finally {
+      setLoadDbLoading(false);
+    }
+  };
+
+  const handleCheckAccuracy = async () => {
+    setAccError("");
+    setAccuracy(null);
+
+    let data;
+    try {
+      data = JSON.parse(dataJson);
+    } catch {
+      setAccError("Fix the history JSON first (same as for forecasting).");
+      return;
+    }
+    if (!Array.isArray(data) || data.length === 0) {
+      setAccError("Load from database or paste history, then run the check.");
+      return;
+    }
+
+    const hw = Math.min(12, Math.max(1, parseInt(holdoutWeeks, 10) || 4));
+
+    setAccLoading(true);
+    try {
+      const res = await checkPredictionAccuracy({
+        store_id: storeId.trim(),
+        sku_id: skuId.trim(),
+        data,
+        holdout_weeks: hw,
+      });
+      setAccuracy(res);
+    } catch (err) {
+      setAccError(err.message || "Accuracy check failed");
+    } finally {
+      setAccLoading(false);
     }
   };
 
@@ -312,9 +373,9 @@ function Predict({ toggleTheme, theme = "dark" }) {
           <p className="presentation-kicker">Admin · for store owners</p>
           <h1 className="presentation-title">Demand forecast &amp; shop advice</h1>
           <p className="presentation-sub">
-            Paste or load sales, then read the <strong>plain-English summary</strong> and <strong>do this next</strong>{" "}
-            list. Charts show teal = smarter plan, orange = &quot;same as last week.&quot; Technical costs and JSON
-            stay tucked under &quot;Technical details&quot;. <em>Staff cannot open this page.</em>
+            <strong>Demand forecast</strong> (what customers are likely to want next) — not a replay of past sales.
+            Load <strong>historical sold quantities</strong> from MongoDB (same data as manual/CSV sales), or paste JSON.
+            Teal = smarter demand curve; orange = simple &quot;repeat last week&quot; rule. <em>Staff cannot open this page.</em>
           </p>
         </header>
 
@@ -327,7 +388,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
                 <input
                   value={storeId}
                   onChange={(e) => setStoreId(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || accLoading}
                 />
               </label>
               <label>
@@ -335,7 +396,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
                 <input
                   value={skuId}
                   onChange={(e) => setSkuId(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || accLoading}
                 />
               </label>
               <label>
@@ -367,18 +428,130 @@ function Predict({ toggleTheme, theme = "dark" }) {
               </label>
             </div>
             <label className="presentation-json-label">
-              Sales history JSON <small>(date, sku_id, sales)</small>
+              History used as <strong>demand signals</strong> <small>(date, sku_id, sales = units sold that day)</small>
               <textarea
                 value={dataJson}
                 onChange={(e) => setDataJson(e.target.value)}
-                disabled={loading}
+                disabled={loading || loadDbLoading || accLoading}
                 rows={8}
               />
             </label>
-            <button type="submit" className="approve-btn presentation-cta" disabled={loading}>
-              {loading ? "Running prediction…" : "Get forecast &amp; shop advice"}
-            </button>
+            <div className="predict-actions-row">
+              <button
+                type="button"
+                className="approve-btn predict-load-db-btn"
+                disabled={loading || loadDbLoading}
+                onClick={handleLoadFromMongo}
+              >
+                {loadDbLoading ? "Loading from MongoDB…" : "Load history from database"}
+              </button>
+              <button type="submit" className="approve-btn presentation-cta" disabled={loading || loadDbLoading}>
+                {loading ? "Forecasting demand…" : "Forecast demand &amp; shop advice"}
+              </button>
+            </div>
+            <p className="predict-hint">
+              Sales are stored when you use <strong>Sales</strong> in the app or uploads. They feed the model as
+              evidence of demand; the output is <strong>future weeks’ demand</strong>, not predicted past receipts.
+            </p>
           </form>
+
+          <div className="accuracy-backtest-card">
+            <h3>How close was the forecast? (accuracy check)</h3>
+            <p className="accuracy-backtest-lead">
+              We <strong>hide the last few weeks</strong> of real sales, run the same engine on everything before
+              that, then <strong>compare forecast demand</strong> to <strong>what customers actually bought</strong> in
+              those hidden weeks. You need enough history (typically <strong>9+ weeks</strong> for a 4-week test).
+            </p>
+            <div className="accuracy-backtest-controls">
+              <label>
+                Weeks to hide
+                <select
+                  value={holdoutWeeks}
+                  onChange={(e) => setHoldoutWeeks(e.target.value)}
+                  disabled={accLoading || loading}
+                >
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="6">6</option>
+                  <option value="8">8</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="approve-btn"
+                disabled={accLoading || loading || loadDbLoading}
+                onClick={handleCheckAccuracy}
+              >
+                {accLoading ? "Running backtest…" : "Run accuracy check"}
+              </button>
+            </div>
+            {accError && (
+              <p className="presentation-error" style={{ marginTop: 12, padding: 12, borderRadius: 8 }}>
+                {accError}
+              </p>
+            )}
+            {accuracy && (
+              <div className="accuracy-results">
+                <p className="accuracy-summary">{accuracy.summary}</p>
+                <p className="accuracy-quality">
+                  <strong>Read this like a report card:</strong> {accuracy.quality_hint}
+                </p>
+                {!accuracy.weeks_calendar_aligned && (
+                  <p className="predict-hint">
+                    Note: some week labels between actual and forecast did not match exactly; errors are still
+                    compared week-by-week in order.
+                  </p>
+                )}
+                <div className="accuracy-metrics-row">
+                  <div className="card presentation-kpi">
+                    <span className="kpi-label">MAPE (average % error)</span>
+                    <span className="kpi-value">
+                      {accuracy.metrics?.mape_percent != null
+                        ? `${accuracy.metrics.mape_percent}%`
+                        : "—"}
+                    </span>
+                    <span className="kpi-hint">lower is better</span>
+                  </div>
+                  <div className="card presentation-kpi">
+                    <span className="kpi-label">MAE (units off)</span>
+                    <span className="kpi-value">{accuracy.metrics?.mae ?? "—"}</span>
+                    <span className="kpi-hint">mean absolute error per week</span>
+                  </div>
+                  <div className="card presentation-kpi">
+                    <span className="kpi-label">RMSE</span>
+                    <span className="kpi-value">{accuracy.metrics?.rmse ?? "—"}</span>
+                    <span className="kpi-hint">punishes big misses more</span>
+                  </div>
+                </div>
+                <h4 className="accuracy-table-title">Week by week</h4>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="presentation-table accuracy-table">
+                    <thead>
+                      <tr>
+                        <th>Week</th>
+                        <th>Actual demand</th>
+                        <th>Forecast demand</th>
+                        <th>Error</th>
+                        <th>Error %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(accuracy.by_week || []).map((row, i) => (
+                        <tr key={i}>
+                          <td>{row.week_start}</td>
+                          <td>{row.actual_demand}</td>
+                          <td>{row.forecast_demand}</td>
+                          <td>{row.error}</td>
+                          <td>{row.ape_percent != null ? `${row.ape_percent}%` : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -393,14 +566,14 @@ function Predict({ toggleTheme, theme = "dark" }) {
             <div className="card retailer-plain-card">
               <h2 className="retailer-plain-title">What this means for your shop</h2>
               <p className="retailer-plain-lead">
-                Short read — no jargon. Orange line = &quot;I&apos;ll sell what I sold last week again.&quot;
-                Teal = smarter pattern (AI if trained, otherwise a fair average).
+                Short read — no jargon. We&apos;re estimating <strong>future demand</strong> (what to stock for), not
+                restating old sales. Orange = demand if every week looked like last week; teal = smarter demand pattern.
               </p>
 
               {retailer.totalSmart != null && (
                 <p className="retailer-plain-p">
-                  For <strong>{retailer.skuDisplay}</strong>, plan for about{" "}
-                  <strong>{retailer.totalSmart} units</strong> to move in the <strong>next 4 weeks</strong>
+                  For <strong>{retailer.skuDisplay}</strong>, <strong>expected demand</strong> is about{" "}
+                  <strong>{retailer.totalSmart} units</strong> over the <strong>next 4 weeks</strong>
                   {retailer.avgWeek != null && (
                     <>
                       {" "}
@@ -441,8 +614,8 @@ function Predict({ toggleTheme, theme = "dark" }) {
                 ))}
               </ol>
               <p className="retailer-mini-note">
-                Numbers are estimates from your pasted sales. For exact accounts, use your books — this page helps
-                you decide <em>how much to stock and when to reorder</em>.
+                Estimates use your <strong>history from MongoDB or the text box</strong> as demand signals — not a
+                substitute for your books. Use this to plan <em>how much to stock and when to reorder</em>.
               </p>
             </div>
 

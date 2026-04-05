@@ -103,7 +103,9 @@ Without a model file, the engine uses a **moving average** fallback — the pred
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/api/predict/history/:storeId?sku=` | Historical sold qty from MongoDB (`Sale` + `Product`) as demand-signal rows for the UI |
 | POST | `/api/predict` | Full pipeline + Mongo log + `insights` (EOQ, illustrative profit/holding) |
+| POST | `/api/predict/accuracy` | Hold-out backtest: same body as `/api/predict` + optional `holdout_weeks` (1–12); returns MAE, RMSE, MAPE %, week table |
 | POST | `/api/ml/train/:storeId` | Train all SKUs from Mongo sales |
 | GET | `/api/ml/forecast/:storeId/:sku` | Forecast + EOQ from Mongo-backed history |
 | GET | `/api/ml/health` | Backend ↔ engine connectivity |

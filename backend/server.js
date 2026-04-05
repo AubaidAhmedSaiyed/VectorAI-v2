@@ -21,7 +21,7 @@ const PurchaseOrder = require('./models/PurchaseOrder');
 const PredictionLog = require('./models/PredictionLog');
 
 // ─── ML Service ───────────────────────────────────────────────────────────────
-const { trainModels, getForecast, healthCheck, predictDemand } = require('./services/mlService');
+const { trainModels, getForecast, healthCheck, predictDemand, predictAccuracy } = require('./services/mlService');
 
 const app       = express();
 const PORT      = Number(process.env.PORT) || 5000;
@@ -1036,6 +1036,59 @@ app.get('/api/ml/forecast/:storeId', asyncHandler(async (req, res) => {
 //  PREDICT API — Frontend → Node (this route) → Python POST /predict → MongoDB
 // ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Collapse multiple Sale lines on the same calendar day into one row (sum qty).
+ * Field name stays `sales` for the Python engine; values are historical sold units
+ * used as demand signals, not the forecast target itself.
+ */
+function aggregateDailyDemandSignals(rows) {
+  const m = new Map();
+  for (const r of rows) {
+    const key = `${r.date}\u0000${r.sku_id}`;
+    m.set(key, (m.get(key) || 0) + Number(r.sales));
+  }
+  return Array.from(m.entries())
+    .map(([k, sales]) => {
+      const [date, sku_id] = k.split('\u0000');
+      return { date, sku_id, sales };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ─── GET /api/predict/history/:storeId?sku=... ─────────────────────────────
+// Pull Sale + Product data from Mongo (same source as CSV / manual sales entry).
+app.get('/api/predict/history/:storeId', asyncHandler(async (req, res) => {
+  const sku = String(req.query.sku || '').trim();
+  if (!sku) {
+    return res.status(400).json({ message: 'Query parameter sku is required (Product.sku)' });
+  }
+  const storeId = String(req.params.storeId || '').trim();
+  if (!storeId) {
+    return res.status(400).json({ message: 'storeId is required' });
+  }
+
+  const all = await buildMLSalesData(storeId);
+  const filtered = all.filter((r) => r.sku_id === sku);
+  if (!filtered.length) {
+    return res.status(404).json({
+      message: `No sales in MongoDB for store "${storeId}" and SKU "${sku}". Record sales via the app, POST /api/sales, or inventory/sales upload.`,
+    });
+  }
+
+  const data = aggregateDailyDemandSignals(filtered);
+  console.log(`[Predict history] store=${storeId} sku=${sku} sale_lines=${filtered.length} days=${data.length}`);
+
+  return res.json({
+    store_id: storeId,
+    sku_id: sku,
+    sale_line_count: filtered.length,
+    distinct_days: data.length,
+    note:
+      'Historical quantities sold (from your DB). The model uses them as signals to forecast future demand — not to reproduce past sales.',
+    data,
+  });
+}));
+
 /** Basic validation before calling the ML engine (avoids pointless HTTP hops). */
 function validatePredictBody(body) {
   const errors = [];
@@ -1065,6 +1118,54 @@ function validatePredictBody(body) {
   });
   return errors;
 }
+
+/**
+ * Hold-out backtest: same shape as POST /api/predict + optional holdout_weeks (1–12, default 4).
+ * Compares forecast demand to actual demand in the hidden weeks (MAE, RMSE, MAPE %).
+ */
+app.post('/api/predict/accuracy', asyncHandler(async (req, res) => {
+  const validationErrors = validatePredictBody(req.body);
+  if (validationErrors.length) {
+    return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
+  }
+
+  let holdout = parseInt(req.body.holdout_weeks, 10);
+  if (!Number.isFinite(holdout) || holdout < 1) holdout = 4;
+  holdout = Math.min(12, holdout);
+
+  const payload = {
+    store_id: String(req.body.store_id).trim(),
+    sku_id: String(req.body.sku_id).trim(),
+    holdout_weeks: holdout,
+    data: req.body.data.map((row) => ({
+      date: String(row.date),
+      sku_id: String(row.sku_id),
+      sales: Number(row.sales),
+    })),
+  };
+
+  try {
+    const result = await predictAccuracy(payload);
+    console.log(
+      `[Predict accuracy] store=${payload.store_id} sku=${payload.sku_id} holdout=${holdout} mape=${result?.metrics?.mape_percent}`
+    );
+    return res.json(result);
+  } catch (err) {
+    const mlStatus = err.response?.status;
+    let detail = err.message || 'Unknown error';
+    if (mlStatus >= 400 && mlStatus < 600) {
+      const d = err.response?.data?.detail;
+      detail = typeof d === 'string' ? d : JSON.stringify(d);
+    }
+    const status =
+      mlStatus >= 400 && mlStatus < 600
+        ? mlStatus
+        : err.code === 'ECONNABORTED'
+          ? 504
+          : 502;
+    return res.status(status).json({ message: 'Accuracy check failed', detail });
+  }
+}));
 
 app.post('/api/predict', asyncHandler(async (req, res) => {
   const validationErrors = validatePredictBody(req.body);

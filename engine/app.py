@@ -5,6 +5,7 @@ FastAPI entry point for the Vector AI ML Engine.
 
 Endpoints:
   POST /predict                     → JSON in/out (Node.js integration)
+  POST /predict/accuracy            → hold-out backtest vs known weeks
   POST /train/{store_id}            → trains models for all SKUs
   POST /forecast/{store_id}/{sku_id} → returns 4-week forecast (+ EOQ hint)
   GET  /health                      → health check
@@ -12,12 +13,13 @@ Endpoints:
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 import pandas as pd
 
 from train import train_all_skus
 from predict import predict_demand
+from accuracy import backtest_accuracy
 
 app = FastAPI(
     title="Vector AI — Demand Forecasting Engine",
@@ -75,6 +77,14 @@ class PredictRequest(BaseModel):
     data: List[SalesRecord]
 
 
+class AccuracyRequest(BaseModel):
+    """Hold out the last N weeks and compare forecast demand to actual demand."""
+    store_id: str
+    sku_id: str
+    data: List[SalesRecord]
+    holdout_weeks: int = Field(default=4, ge=1, le=12)
+
+
 # ---------------------------------------------------------------------------
 # Helper: convert list of SalesRecord → pandas DataFrame
 # ---------------------------------------------------------------------------
@@ -116,6 +126,31 @@ def predict_endpoint(body: PredictRequest):
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+
+@app.post("/predict/accuracy")
+def predict_accuracy_endpoint(body: AccuracyRequest):
+    """
+    Backtest: hide the last `holdout_weeks` of weekly demand, forecast them from
+    earlier history, compare to what was actually sold. Returns MAE, RMSE, MAPE (%), per-week table.
+    """
+    if not body.data:
+        raise HTTPException(status_code=400, detail="No data provided")
+
+    df = records_to_df(body.data)
+
+    try:
+        return backtest_accuracy(
+            body.store_id, body.sku_id, df, body.holdout_weeks
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Accuracy check failed: {str(e)}"
+        )
 
 
 @app.post("/train/{store_id}", response_model=TrainResponse)
