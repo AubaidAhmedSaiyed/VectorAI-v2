@@ -4,8 +4,9 @@ app.py
 FastAPI entry point for the Vector AI ML Engine.
 
 Endpoints:
+  POST /predict                     → JSON in/out (Node.js integration)
   POST /train/{store_id}            → trains models for all SKUs
-  GET  /forecast/{store_id}/{sku_id} → returns 4-week forecast
+  POST /forecast/{store_id}/{sku_id} → returns 4-week forecast (+ EOQ hint)
   GET  /health                      → health check
 """
 
@@ -14,11 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import pandas as pd
-import io
 
 from train import train_all_skus
-from forecast import forecast_sku
-from fallback import moving_average_forecast
+from predict import predict_demand
 
 app = FastAPI(
     title="Vector AI — Demand Forecasting Engine",
@@ -66,12 +65,24 @@ class ForecastResponse(BaseModel):
     eoq_hint: dict   # basic EOQ info for Node.js backend to use
 
 
+class PredictRequest(BaseModel):
+    """
+    Body for POST /predict — same sales rows as training, plus store and SKU.
+    Node.js /api/predict forwards this JSON to the engine.
+    """
+    store_id: str
+    sku_id: str
+    data: List[SalesRecord]
+
+
 # ---------------------------------------------------------------------------
 # Helper: convert list of SalesRecord → pandas DataFrame
 # ---------------------------------------------------------------------------
 
 def records_to_df(records: List[SalesRecord]) -> pd.DataFrame:
-    return pd.DataFrame([r.dict() for r in records])
+    # Pydantic v2: model_dump(); keep dict() fallback for older stacks
+    rows = [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in records]
+    return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +93,29 @@ def records_to_df(records: List[SalesRecord]) -> pd.DataFrame:
 def health_check():
     """Simple health check — confirms service is running."""
     return {"status": "ok", "service": "Vector AI ML Engine"}
+
+
+@app.post("/predict")
+def predict_endpoint(body: PredictRequest):
+    """
+    Generic JSON prediction API for integration (e.g. Node.js POST /api/predict).
+
+    Expects: store_id, sku_id, and data[] of {date, sku_id, sales}.
+    Returns: forecast weeks + eoq_hint (same contract as POST /forecast/...).
+    """
+    if not body.data:
+        raise HTTPException(status_code=400, detail="No data provided")
+
+    df = records_to_df(body.data)
+
+    try:
+        return predict_demand(body.store_id, body.sku_id, df)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
 @app.post("/train/{store_id}", response_model=TrainResponse)
@@ -156,29 +190,10 @@ def forecast_post_endpoint(store_id: str, sku_id: str, body: TrainRequest):
     df = records_to_df(body.data)
 
     try:
-        forecast_points = forecast_sku(store_id, sku_id, df)
+        return predict_demand(store_id, sku_id, df)
     except FileNotFoundError as e:
-        # Model not found → try fallback moving average
-        try:
-            forecast_points = moving_average_forecast(store_id, sku_id, df)
-        except Exception as fe:
-            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Forecast failed: {str(e)}")
-
-    # Compute EOQ helper values for the Node.js backend
-    total_demand = sum(p["forecast"] for p in forecast_points)
-    avg_weekly = total_demand / len(forecast_points) if forecast_points else 0
-
-    return {
-        "store_id": store_id,
-        "sku_id": sku_id,
-        "forecast": forecast_points,
-        "eoq_hint": {
-            "total_4_week_demand": round(total_demand, 2),
-            "avg_weekly_demand": round(avg_weekly, 2),
-            "note": "Pass total_4_week_demand with your holding and ordering costs to compute EOQ"
-        }
-    }

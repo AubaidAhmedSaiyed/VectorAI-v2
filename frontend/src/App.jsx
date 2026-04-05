@@ -7,17 +7,19 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
+import RequireAdmin from "./components/RequireAdmin";
+
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStockManagement from "./pages/admin/StockManagement";
 import Procurement from "./pages/admin/Procurement";
 import Intelligence from "./pages/admin/Intelligence";
+import Predict from "./pages/admin/Predict";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffReports from "./pages/staff/StaffReports";
 import StaffOrders from "./pages/staff/StaffOrders";
 import StaffStockManagement from "./pages/staff/StaffStockManagement";
 
 function App() {
-  /* ================= THEME STATE ================= */
   const [theme, setTheme] = React.useState(
     localStorage.getItem("theme") || "dark",
   );
@@ -49,16 +51,30 @@ function App() {
             element={<Signup toggleTheme={toggleTheme} theme={theme} />}
           />
 
-          <Route
-            path="/admin/dashboard"
-            element={<AdminDashboard toggleTheme={toggleTheme} theme={theme} />}
-          />
-          <Route
-            path="/admin/stock"
-            element={
-              <AdminStockManagement toggleTheme={toggleTheme} theme={theme} />
-            }
-          />
+          <Route element={<RequireAdmin />}>
+            <Route
+              path="/admin/dashboard"
+              element={<AdminDashboard toggleTheme={toggleTheme} theme={theme} />}
+            />
+            <Route
+              path="/admin/stock"
+              element={
+                <AdminStockManagement toggleTheme={toggleTheme} theme={theme} />
+              }
+            />
+            <Route
+              path="/admin/procurement"
+              element={<Procurement toggleTheme={toggleTheme} theme={theme} />}
+            />
+            <Route
+              path="/admin/intelligence"
+              element={<Intelligence toggleTheme={toggleTheme} theme={theme} />}
+            />
+            <Route
+              path="/admin/predict"
+              element={<Predict toggleTheme={toggleTheme} theme={theme} />}
+            />
+          </Route>
 
           <Route
             path="/staff/dashboard"
@@ -66,30 +82,17 @@ function App() {
           />
           <Route
             path="/staff/StaffOrders"
+            element={<StaffOrders toggleTheme={toggleTheme} theme={theme} />}
+          />
+          <Route
+            path="/staff/StaffReports"
+            element={<StaffReports toggleTheme={toggleTheme} theme={theme} />}
+          />
+          <Route
+            path="/staff/StaffStockManagement"
             element={
-              <StaffOrders toggleTheme={toggleTheme} theme={theme} />
+              <StaffStockManagement toggleTheme={toggleTheme} theme={theme} />
             }
-          />
-          <Route
-             path="/staff/StaffReports"
-             element={
-                <StaffReports toggleTheme={toggleTheme} theme={theme} />
-             }
-          />
-          <Route 
-              path="/staff/StaffStockManagement"
-              element={
-                <StaffStockManagement toggleTheme={toggleTheme} theme={theme} />
-              }
-          />
-          <Route
-            path="/admin/procurement"
-            element={<Procurement toggleTheme={toggleTheme} theme={theme} />}
-          />
-
-          <Route
-            path="/admin/intelligence"
-            element={<Intelligence toggleTheme={toggleTheme} theme={theme} />}
           />
         </Routes>
       </BrowserRouter>

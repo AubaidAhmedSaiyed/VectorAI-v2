@@ -66,6 +66,11 @@ function DashboardNavbar({ toggleTheme }) {
         <button className="sidebar-btn" onClick={() => goTo("intelligence")}>
            Intelligence
         </button>
+        {role === "admin" && (
+          <button className="sidebar-btn" onClick={() => goTo("predict")}>
+            Forecast &amp; shop advice
+          </button>
+        )}
       </div>
 
       {/* OVERLAY */}

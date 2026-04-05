@@ -17,9 +17,10 @@ const Sale          = require('./models/Sale');
 const Product       = require('./models/Product');
 const Batch         = require('./models/Batch');
 const PurchaseOrder = require('./models/PurchaseOrder');
+const PredictionLog = require('./models/PredictionLog');
 
 // ─── ML Service ───────────────────────────────────────────────────────────────
-const { trainModels, getForecast, healthCheck } = require('./services/mlService');
+const { trainModels, getForecast, healthCheck, predictDemand } = require('./services/mlService');
 
 const app       = express();
 const PORT      = Number(process.env.PORT) || 5000;
@@ -69,6 +70,53 @@ function computeEOQ(total4WeekDemand, orderingCost = 50, holdingCost = 2) {
   const D = total4WeekDemand * 13;
   if (holdingCost <= 0 || orderingCost <= 0) return null;
   return Math.round(Math.sqrt((2 * D * orderingCost) / holdingCost));
+}
+
+/**
+ * EOQ + simple profit/holding illustration for presentation UI (builds on Python comparison.*).
+ */
+function buildPredictInsights(prediction, { orderingCost, holdingCost, unitMargin }) {
+  if (!prediction?.eoq_hint) return null;
+
+  const ml4 = Number(prediction.eoq_hint.total_4_week_demand);
+  const naive4 = prediction.comparison?.totals_four_week?.without_ml_naive;
+  const eoqMl = computeEOQ(ml4, orderingCost, holdingCost);
+  const eoqNaive =
+    naive4 != null ? computeEOQ(Number(naive4), orderingCost, holdingCost) : null;
+
+  const overNaive =
+    Number.isFinite(ml4) && naive4 != null
+      ? Math.max(0, Number(naive4) - ml4)
+      : 0;
+  const underNaive =
+    Number.isFinite(ml4) && naive4 != null
+      ? Math.max(0, ml4 - Number(naive4))
+      : 0;
+  const weeklyHolding = holdingCost / 52;
+  const roughExtraHolding = Math.round(overNaive * weeklyHolding * 4);
+  const roughMissedProfit = Math.round(underNaive * unitMargin);
+
+  return {
+    eoq: {
+      ordering_cost_per_order: orderingCost,
+      holding_cost_per_unit_year: holdingCost,
+      eoq_units_aligned_with_ml: eoqMl,
+      eoq_units_aligned_with_naive_plan: eoqNaive,
+      annualized_demand_from_ml: Number.isFinite(ml4) ? Math.round(ml4 * 13) : null,
+      annualized_demand_from_naive_plan:
+        naive4 != null ? Math.round(Number(naive4) * 13) : null,
+    },
+    illustrative_impact: {
+      unit_margin_assumption_inr: unitMargin,
+      disclaimer:
+        'Illustrative demo: rough signals if you plan with a flat historical average vs ML-guided demand — not financial advice.',
+      naive_over_forecasts_vs_ml_units: overNaive,
+      naive_under_forecasts_vs_ml_units: underNaive,
+      rough_extra_holding_exposure_4w_inr: roughExtraHolding,
+      rough_missed_profit_if_understocked_inr: roughMissedProfit,
+      net_illustrative_signal_inr: roughMissedProfit - roughExtraHolding,
+    },
+  };
 }
 
 // Auto PO number: PO-20240315-0001
@@ -980,6 +1028,139 @@ app.get('/api/ml/forecast/:storeId', asyncHandler(async (req, res) => {
   }
 
   return res.json({ store_id: storeId, total_skus: skuIds.length, forecasts: allForecasts });
+}));
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PREDICT API — Frontend → Node (this route) → Python POST /predict → MongoDB
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Basic validation before calling the ML engine (avoids pointless HTTP hops). */
+function validatePredictBody(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object') {
+    errors.push('Request body must be JSON');
+    return errors;
+  }
+  if (!body.store_id || typeof body.store_id !== 'string' || !String(body.store_id).trim()) {
+    errors.push('store_id is required');
+  }
+  if (!body.sku_id || typeof body.sku_id !== 'string' || !String(body.sku_id).trim()) {
+    errors.push('sku_id is required');
+  }
+  if (!Array.isArray(body.data) || body.data.length === 0) {
+    errors.push('data must be a non-empty array of { date, sku_id, sales }');
+    return errors;
+  }
+  body.data.forEach((row, i) => {
+    if (!row || typeof row !== 'object') {
+      errors.push(`data[${i}] must be an object`);
+      return;
+    }
+    if (!row.date) errors.push(`data[${i}].date is required`);
+    if (!row.sku_id) errors.push(`data[${i}].sku_id is required`);
+    const sales = Number(row.sales);
+    if (!Number.isFinite(sales)) errors.push(`data[${i}].sales must be a finite number`);
+  });
+  return errors;
+}
+
+app.post('/api/predict', asyncHandler(async (req, res) => {
+  const validationErrors = validatePredictBody(req.body);
+  if (validationErrors.length) {
+    console.warn('[Predict] validation failed:', validationErrors);
+    return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
+  }
+
+  const payload = {
+    store_id: String(req.body.store_id).trim(),
+    sku_id: String(req.body.sku_id).trim(),
+    data: req.body.data.map((row) => ({
+      date: String(row.date),
+      sku_id: String(row.sku_id),
+      sales: Number(row.sales),
+    })),
+  };
+
+  // Align PredictionLog with Product catalog (see backend/DATABASE_SCHEMA.md)
+  const productRow = await Product.findOne({ sku: payload.sku_id })
+    .select('_id holdingCost')
+    .lean();
+  const productId = productRow?._id || null;
+
+  try {
+    const result = await predictDemand(payload);
+
+    let orderingCost = parseNum(req.body.ordering_cost, 50);
+    if (orderingCost <= 0) orderingCost = 50;
+    let holdingCost = parseNum(req.body.holding_cost, NaN);
+    if (!Number.isFinite(holdingCost) || holdingCost <= 0) {
+      holdingCost =
+        productRow?.holdingCost && productRow.holdingCost > 0 ? productRow.holdingCost : 2;
+    }
+    let unitMargin = parseNum(req.body.unit_margin, 15);
+    if (unitMargin <= 0) unitMargin = 15;
+
+    const insights = buildPredictInsights(result, {
+      orderingCost,
+      holdingCost,
+      unitMargin,
+    });
+
+    const log = await PredictionLog.create({
+      storeId: payload.store_id,
+      sku: payload.sku_id,
+      product: productId,
+      status: 'success',
+      inputData: {
+        ...payload,
+        ordering_cost: orderingCost,
+        holding_cost: holdingCost,
+        unit_margin: unitMargin,
+      },
+      prediction: { ...result, insights },
+    });
+    console.log(`[Predict] ok store=${payload.store_id} sku=${payload.sku_id} log=${log._id}`);
+    return res.json({
+      ok: true,
+      logId: log._id,
+      prediction: result,
+      insights,
+    });
+  } catch (err) {
+    let detail = err.message || 'Unknown error';
+    let status = 500;
+
+    // Errors from mlService.fetchJson attach response for FastAPI-style bodies
+    const mlStatus = err.response?.status;
+    if (mlStatus >= 400 && mlStatus < 600) {
+      const d = err.response?.data?.detail;
+      if (typeof d === 'string') detail = d;
+      else if (d !== undefined) detail = JSON.stringify(d);
+      status = mlStatus;
+    } else if (err.code === 'ECONNABORTED') {
+      status = 504;
+    } else if (!mlStatus) {
+      status = 502;
+    }
+
+    const log = await PredictionLog.create({
+      storeId: payload.store_id,
+      sku: payload.sku_id,
+      product: productId,
+      status: 'error',
+      inputData: payload,
+      prediction: { error: detail, httpStatus: status },
+    });
+    console.error(`[Predict] failed log=${log._id} status=${status} detail=${detail}`);
+
+    return res.status(status).json({
+      ok: false,
+      logId: log._id,
+      message: 'Prediction service error',
+      detail,
+    });
+  }
 }));
 
 
