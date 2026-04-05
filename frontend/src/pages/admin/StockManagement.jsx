@@ -1,7 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import DashboardNavbar from "../../components/DashboardNavbar";
 
 function StockManagement({ toggleTheme }) {
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleApproveAudit = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setCompleted(true);
+      setToastMsg("Audit Log successfully reconciled!");
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
+
   return (
     <>
       <DashboardNavbar toggleTheme={toggleTheme} />
@@ -39,13 +53,19 @@ function StockManagement({ toggleTheme }) {
           </table>
 
           <div style={{ marginTop: "20px" }}>
-            <button className="approve-btn">
-              Approve Audit
+            <button
+              className={`approve-btn ${loading ? "btn-processing" : ""}`}
+              onClick={handleApproveAudit}
+              disabled={loading || completed}
+            >
+              {completed ? "Audit Approved ✓" : "Approve Audit Log"}
             </button>
           </div>
         </div>
 
       </div>
+
+      {toastMsg && <div className="toast-notification">{toastMsg}</div>}
     </>
   );
 }

@@ -1,7 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import DashboardNavbar from "../../components/DashboardNavbar";
 
 function Procurement({ toggleTheme }) {
+  const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleGeneratePO = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setCompleted(true);
+      setToastMsg("Purchase Order successfully dispatched!");
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
+
   return (
     <>
       <DashboardNavbar toggleTheme={toggleTheme} />
@@ -39,13 +53,18 @@ function Procurement({ toggleTheme }) {
           </table>
 
           <div style={{ marginTop: "20px" }}>
-            <button className="approve-btn">
-              Generate Purchase Order
+            <button
+              className={`approve-btn ${loading ? "btn-processing" : ""}`}
+              onClick={handleGeneratePO}
+              disabled={loading || completed}
+            >
+              {completed ? "PO Generated ✓" : "Generate Purchase Order"}
             </button>
           </div>
         </div>
-
       </div>
+      
+      {toastMsg && <div className="toast-notification">{toastMsg}</div>}
     </>
   );
 }

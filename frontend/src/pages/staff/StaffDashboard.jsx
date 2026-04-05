@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardNavbar from "../../components/DashboardNavbar"; 
 import StockTable from "../../components/StockTable";
@@ -7,6 +7,20 @@ import "../../App.css";
 
 const StaffDashboard = ({ toggleTheme }) => {
   const navigate = useNavigate();
+  const [toastMsg, setToastMsg] = useState("");
+  const [actionStates, setActionStates] = useState({
+    moved: 'idle',
+    discount: 'idle'
+  });
+
+  const handleAction = (id, msg) => {
+    setActionStates(p => ({ ...p, [id]: 'loading' }));
+    setTimeout(() => {
+      setActionStates(p => ({ ...p, [id]: 'done' }));
+      setToastMsg(msg);
+      setTimeout(() => setToastMsg(""), 3000);
+    }, 600);
+  };
 
   return (
     <>
@@ -30,13 +44,29 @@ const StaffDashboard = ({ toggleTheme }) => {
               <td>Milk 500ml</td>
               <td>#M12</td>
               <td>2 Days</td>
-              <td><button className="ghost-btn">Moved</button></td>
+              <td>
+                <button 
+                  className={`ghost-btn ${actionStates.moved === 'loading' ? 'btn-processing' : ''}`}
+                  onClick={() => handleAction('moved', 'Item securely moved to separate bin.')}
+                  disabled={actionStates.moved !== 'idle'}
+                >
+                  {actionStates.moved === 'done' ? 'Done ✓' : 'Move Stock'}
+                </button>
+              </td>
             </tr>
             <tr>
               <td>Bread Classic</td>
               <td>#B22</td>
               <td>1 Day</td>
-              <td><button className="ghost-btn">Discount</button></td>
+              <td>
+                <button 
+                  className={`ghost-btn ${actionStates.discount === 'loading' ? 'btn-processing' : ''}`}
+                  onClick={() => handleAction('discount', 'Discount flag applied to system.')}
+                  disabled={actionStates.discount !== 'idle'}
+                >
+                   {actionStates.discount === 'done' ? 'Done ✓' : 'Apply Discount'}
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -76,6 +106,7 @@ const StaffDashboard = ({ toggleTheme }) => {
       </div>
 
     </div>
+    {toastMsg && <div className="toast-notification">{toastMsg}</div>}
   </>
   );
 };
