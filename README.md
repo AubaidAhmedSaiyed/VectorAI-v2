@@ -1,6 +1,15 @@
 # Vector AI
 
-Retail decision-support stack: **React** frontend, **Express + MongoDB** backend, and a **Python (FastAPI)** demand-forecasting engine (XGBoost with a moving-average fallback).
+Vector AI is an end-to-end **retail demand intelligence platform** for grocery/Kirana-style operations.  
+It combines a **React admin app**, an **Express + MongoDB API**, and a **Python (FastAPI) forecasting engine** to help teams:
+
+- forecast the next 4 weeks of demand per SKU
+- compare AI-guided demand vs a simple "repeat last week" baseline
+- compute EOQ-aligned order sizes from demand forecasts
+- estimate rough financial exposure from understocking vs overstocking
+- log each prediction run for auditability and review
+
+The product is centered on the admin flow at **`/admin/predict`** ("Prediction & insights"), with chart-based outputs, plain-language actions for store owners, and technical drill-down details.
 
 ## Architecture
 
@@ -15,7 +24,52 @@ Browser (Vite/React)
 
 **Database schema:** See **[backend/DATABASE_SCHEMA.md](backend/DATABASE_SCHEMA.md)** for all collections, fields, and how API `store_id` / `sku_id` map to `Sale.storeId`, `Product.sku`, and `PredictionLog`.
 
-**Admin prediction UI:** **`/admin/predict`** — charts (**with ML** vs **without ML** naive plan), Wilson **EOQ**, illustrative profit/holding, raw JSON. **Staff cannot access** any `/admin/*` route (redirects to staff dashboard or login).
+**Admin prediction UI:** **`/admin/predict`** — charts (**with ML** vs **without ML** naive plan), Wilson **EOQ**, illustrative profit/holding signals, raw JSON, and prediction log references. **Staff cannot access** any `/admin/*` route (redirects to staff dashboard or login).
+
+## Metrics, numbers, and impact
+
+The system already exposes measurable outputs you can use for demos, reporting, and decision reviews:
+
+### Forecast quality metrics (backtest)
+
+Via **`POST /api/predict/accuracy`** (hold-out validation), Vector AI reports:
+
+- **MAPE (%)**: average percentage error (lower is better)
+- **MAE (units)**: average absolute units off per week
+- **RMSE (units)**: error metric that penalizes larger misses
+- **Week-by-week table**: actual demand vs forecast demand, with error and error %
+
+Numeric controls and ranges:
+
+- `holdout_weeks`: **1–12** (default **4**)
+- Typical practical guidance in UI: keep at least **9+ weeks** of history when using a **4-week** holdout for stable evaluation
+
+### Demand and planning numbers
+
+From **`POST /api/predict`**, each run returns:
+
+- **4-week total forecast demand** (`with_ml`)
+- **4-week naive baseline demand** (`without_ml_naive`)
+- **Difference (units)** between the two plans (`difference_ml_minus_naive`)
+- **Average weekly demand** and annualized demand values used for ordering logic
+
+### Inventory decision metrics
+
+Vector AI computes EOQ-aligned ordering suggestions using forecasted demand:
+
+- **Balanced order size (units/order)** aligned with ML forecast
+- **Order size from simple rule** (copy-last-week baseline)
+- Comparison helps quantify whether a simple rule leads to tighter or looser ordering
+
+### Financial impact signals (illustrative)
+
+The API and UI expose rough 4-week business impact signals in INR:
+
+- `rough_missed_profit_if_understocked_inr`
+- `rough_extra_holding_exposure_4w_inr`
+- `net_illustrative_signal_inr` (understock signal minus overstock holding signal)
+
+These are intentionally labeled as **illustrative demo signals**, not accounting-grade finance outputs.
 
 ## Prerequisites
 
