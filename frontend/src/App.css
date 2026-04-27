@@ -3446,3 +3446,68 @@ input:focus, textarea:focus, select:focus {
     font-size: 1.05rem !important;
   }
 }
+
+
+/* ========================================================================= */
+/*                   MINIMAL LIGHTWEIGHT MOBILE NAVBAR REFINEMENT            */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+  /* Remove heavy container background, border, and shadows */
+  .modern-navbar-enhanced .nav-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    gap: 8px !important; /* Breathable spacing */
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .modern-navbar-enhanced .nav-links-wrapper {
+    gap: 8px !important;
+  }
+
+  /* Clean, simple list items */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    padding: 12px 14px !important; /* Breathing room for hit area */
+    border-radius: 8px !important; /* Soft corners for app feel */
+    font-size: 1rem !important; /* Clean size */
+    font-weight: 500 !important;
+    background: transparent !important;
+    color: var(--text-main) !important; /* Main readable color */
+  }
+
+  /* Extremely light hover effects instead of strong block highlights */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover,
+  .theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: var(--text-main) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-text-link:hover,
+  [data-theme="light"] .modern-navbar-enhanced .nav-link-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+  }
+
+  /* Seamless CTA - prominent but clean without huge offsets or disjointedness */
+  .modern-navbar-enhanced .nav-primary-btn {
+    width: 100% !important;
+    margin-top: 10px !important; /* Soft separator */
+    padding: 14px 0 !important;
+    text-align: center !important;
+    border-radius: 999px !important; /* Standard pill shape */
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important; /* Much lighter shadow */
+  }
+}
