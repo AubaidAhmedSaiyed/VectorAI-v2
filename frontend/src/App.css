@@ -2918,3 +2918,254 @@ button[disabled] {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+/* ========================================================================= */
+/*                   TABLET & MOBILE RESPONSIVE FIXES                        */
+/* ========================================================================= */
+
+/* 1. Global Box Sizing & Horizontal Scroll Prevention */
+html, body, #root, .landing-page {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Ensure tables do not cause overflow layout breakage */
+table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* ==================================== */
+/*      TABLET (max-width: 768px)       */
+/* ==================================== */
+@media screen and (max-width: 768px) {
+  
+  /* Hero Section Elements */
+  .dashboard-hero-section.modern-hero {
+    padding: 6rem 5% 3rem !important;
+  }
+  
+  .flickr-title, h1.flickr-title {
+    font-size: 2.6rem !important;
+    line-height: 1.25 !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.15rem !important;
+    padding: 0 16px !important;
+  }
+  
+  .flickr-support {
+    padding: 0 20px !important;
+  }
+
+  /* Navbar Layout Adjustment */
+  .navbar.modern-navbar-enhanced {
+    padding: 1.2rem 5% !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    height: auto !important;
+  }
+  
+  .modern-navbar-enhanced .nav-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+    gap: 12px !important;
+  }
+  
+  .modern-navbar-enhanced .nav-links-wrapper {
+    margin-right: 0 !important;
+  }
+
+  /* Mock Dashboard & Sidebar Fixes */
+  .mock-dashboard-wrapper.modern-dashboard {
+    width: 95% !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  
+  .mock-sidebar.modern-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-medium) !important;
+    padding: 16px !important;
+  }
+  
+  .mock-content.modern-content {
+    padding: 24px !important;
+    overflow-x: hidden !important;
+  }
+  
+  .analytics-row {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  
+  /* Feature Grids */
+  .modern-card-grid, .card-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .showcase-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Contact Form */
+  .modern-contact-card {
+    padding: 32px !important;
+    width: 90% !important;
+    max-width: 100% !important;
+  }
+
+  /* Footer Layout Structure */
+  .footer-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 32px !important;
+  }
+}
+
+/* ==================================== */
+/*      MOBILE (max-width: 480px)       */
+/* ==================================== */
+@media screen and (max-width: 480px) {
+
+  /* Navbar Stacking */
+  .navbar.modern-navbar-enhanced {
+    padding: 1rem 16px !important;
+  }
+
+  .modern-navbar-enhanced .nav-actions,
+  .modern-navbar-enhanced .nav-links-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .modern-navbar-enhanced .nav-primary-btn,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* Hero Section Refinements */
+  .dashboard-hero-section.modern-hero {
+    padding: 5rem 16px 2rem !important;
+  }
+  
+  .flickr-title, h1.flickr-title {
+    font-size: 2rem !important;
+    letter-spacing: -0.5px !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* CTA Buttons - Force Full Width & Center */
+  .landing-cta {
+    flex-direction: column !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    padding: 0 16px !important;
+  }
+  
+  .cta-primary-large,
+  .ghost-btn-link,
+  .cta-primary,
+  .cta-secondary {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 14px 20px !important;
+    text-align: center !important;
+  }
+
+  /* Mock Dashboard Box Model Alignment */
+  .mock-dashboard-wrapper.modern-dashboard {
+    width: 100% !important;
+    border-radius: 16px !important;
+    margin: 0 !important;
+  }
+  
+  .mock-content.modern-content {
+    padding: 16px !important;
+  }
+  
+  .chart-box {
+    height: 250px !important;
+  }
+
+  /* Single Column Card Grid Constraint */
+  .modern-card-grid, .card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .modern-feature-card, .info-card {
+    padding: 20px !important;
+  }
+  
+  /* Align Icon and Title normally side by side or Stack properly */
+  .modern-feature-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  /* Full Screen Contact Form Adjustments */
+  .modern-contact-card {
+    width: 100% !important;
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+  
+  .contact-form {
+    padding: 0 !important;
+  }
+
+  .modern-contact-card input,
+  .modern-contact-card textarea,
+  .contact-form input,
+  .contact-form textarea {
+    padding: 14px 16px !important;
+    font-size: 14px !important;
+  }
+
+  .modern-contact-card button,
+  .contact-form button {
+    width: 100% !important;
+    padding: 14px !important;
+  }
+
+  /* Footer Stack Alignment */
+  .footer-container {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 0 16px !important;
+  }
+
+  /* Authentication Frame Reset */
+  .login-card {
+    width: 100% !important;
+    padding: 32px 20px !important;
+    border-radius: 16px !important;
+  }
+}
