@@ -3360,3 +3360,89 @@ input:focus, textarea:focus, select:focus {
     font-weight: 600 !important;
   }
 }
+
+
+/* ========================================================================= */
+/*                   COHESIVE MOBILE MENU STRUCTURE REFINEMENT               */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+  /* Create an Apple-like cohesive menu container block for actions on mobile */
+  .modern-navbar-enhanced .nav-actions {
+    background: var(--glass-bg, rgba(255, 255, 255, 0.03)) !important;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05)) !important;
+    border-radius: 16px !important;
+    padding: 12px !important;
+    gap: 4px !important; /* tight inner spacing */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-actions {
+    background: rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  /* Reset inner wrapper since nav-actions is now the container */
+  .modern-navbar-enhanced .nav-links-wrapper {
+    gap: 4px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Unified menu item feel */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 14px 16px !important;
+    border-radius: 10px !important;
+    font-size: 1.05rem !important; /* solid hierarchy */
+    font-weight: 500 !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important; /* consistent default mapping */
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Remove stray elements breaking structure */
+  .theme-toggle-btn {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  
+  .modern-navbar-enhanced .nav-text-link::after {
+    display: none !important;
+  }
+
+  /* Unified active/hover row highlights (macOS style menu select) */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover,
+  .theme-toggle-btn:hover {
+    background: var(--glass-bg, rgba(255, 255, 255, 0.08)) !important;
+    color: var(--text-main) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-text-link:hover,
+  [data-theme="light"] .modern-navbar-enhanced .nav-link-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Sign up CTA Prominent distinctiveness but unified spacing */
+  .modern-navbar-enhanced .nav-primary-btn {
+    width: 100% !important;
+    margin-top: 12px !important; /* Visual separator gap */
+    padding: 14px 16px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important; /* Matches menu radius precisely */
+    font-size: 1.05rem !important;
+  }
+}
