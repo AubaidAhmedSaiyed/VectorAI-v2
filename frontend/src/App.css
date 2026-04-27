@@ -3280,3 +3280,83 @@ input:focus, textarea:focus, select:focus {
     padding-bottom: 60px !important;
   }
 }
+
+
+/* ========================================================================= */
+/*                   MOBILE NAVBAR VISUAL REFINEMENTS                        */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+
+  /* Shift from rigidly centered to a more structured left-aligned list where applicable */
+  .modern-navbar-enhanced .nav-actions,
+  .modern-navbar-enhanced .nav-links-wrapper {
+    align-items: stretch !important; /* Let children take full width naturally */
+    gap: 6px !important; /* Normalize vertical spacing */
+    margin-top: 4px !important;
+  }
+
+  /* Make text links left aligned or subtly spaced rather than hard center */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn {
+    text-align: left !important;
+    padding: 12px 14px !important;
+    width: 100% !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Hover states for links inside mobile nav */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover {
+    background: var(--glass-bg) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Theme Toggle Fix - Remove oval/blur background, make it look like a text link row */
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 12px 14px !important;
+    border: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+  }
+  
+  .theme-toggle-btn:hover {
+    background: var(--glass-bg) !important;
+  }
+
+  /* Refine Sign Up Button */
+  .modern-navbar-enhanced .nav-primary-btn {
+    margin-top: 10px !important; /* Separation from regular links */
+    margin-bottom: 8px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    padding: 14px 0 !important;
+    text-align: center !important; /* Keep primary CTA centered */
+    box-shadow: 0 4px 12px var(--accent-shadow) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .modern-navbar-enhanced .nav-primary-btn:hover {
+    box-shadow: 0 6px 16px var(--accent-shadow-hover), 0 0 12px var(--accent-glow-primary) !important;
+    opacity: 0.95 !important;
+  }
+
+  /* Hide the underline interaction from desktop navbar links */
+  .modern-navbar-enhanced .nav-text-link::after {
+    display: none !important;
+  }
+
+  /* Keep brand styling clean */
+  .modern-navbar-enhanced .brand-text {
+    font-weight: 600 !important;
+  }
+}
