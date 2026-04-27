@@ -3169,3 +3169,114 @@ table {
     border-radius: 16px !important;
   }
 }
+
+
+/* ========================================================================= */
+/*                   PREMIUM VISUAL ENHANCEMENTS & EFFECTS                   */
+/* ========================================================================= */
+
+/* Global Smooth Scrolling */
+html, body {
+  scroll-behavior: smooth !important;
+}
+
+/* 1. Hero Section & Typography Enhancements */
+.flickr-title, h1.flickr-title {
+  /* Subtle gradient overlay on title */
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 4px 30px rgba(255, 255, 255, 0.1) !important;
+  letter-spacing: -0.5px !important;
+}
+[data-theme="light"] .flickr-title, [data-theme="light"] h1.flickr-title {
+  background: linear-gradient(135deg, var(--text-main) 30%, var(--accent-strong) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 4px 20px rgba(6, 182, 212, 0.15) !important;
+}
+
+.hero-subtitle {
+  letter-spacing: 0.3px !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 2. Buttons: Hover Effects, Lift & Glow */
+button, .nav-text-link {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.cta-primary, .cta-primary-large, .login-btn, .modern-contact-card button {
+  box-shadow: 0 4px 15px var(--accent-shadow) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.cta-primary:hover, .cta-primary-large:hover, .login-btn:hover, .modern-contact-card button:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  box-shadow: 0 10px 25px var(--accent-shadow-hover), 0 0 15px var(--accent-glow-primary) !important;
+  filter: brightness(1.1) !important;
+}
+
+.ghost-btn-link, .cta-secondary {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+}
+
+.ghost-btn-link:hover, .cta-secondary:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  background: var(--accent-glow-primary) !important;
+  box-shadow: 0 8px 20px var(--accent-shadow), inset 0 0 10px var(--accent-glow-secondary) !important;
+}
+
+/* 3. Cards & Dashboard: Soft Depth, Hover Lift & Borders */
+.modern-feature-card, .info-card, .dashboard-card, .trust-card, .mock-dashboard-wrapper.modern-dashboard {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  border-radius: 20px !important;
+  /* Add subtle initial glass shadow */
+  box-shadow: 0 8px 30px var(--shadow-soft), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.modern-feature-card:hover, .info-card:hover, .trust-card:hover, .dashboard-card:hover {
+  transform: translateY(-8px) scale(1.01) !important;
+  box-shadow: 0 20px 40px var(--shadow-strong), 0 0 20px var(--accent-glow-secondary) !important;
+  border-color: var(--accent) !important;
+}
+
+/* 4. Inputs / Forms: Focus Effects & Glow */
+input, textarea, select {
+  transition: all 0.3s ease !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: var(--accent) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 0 0 3px var(--accent-shadow), 0 4px 15px var(--accent-glow-secondary) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Enhance existing dashboard mockup background blur/glow */
+.mock-dashboard-wrapper.modern-dashboard {
+  background: linear-gradient(145deg, rgba(16, 22, 42, 0.85), rgba(13, 18, 34, 0.9)) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="light"] .mock-dashboard-wrapper.modern-dashboard {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(248, 250, 252, 0.9)) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Global Section spacing subtle enhancement */
+.section {
+  padding-top: 100px !important;
+  padding-bottom: 100px !important;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+  }
+}
