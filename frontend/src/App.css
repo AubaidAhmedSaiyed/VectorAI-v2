@@ -59,6 +59,15 @@
   --font-text: "Outfit", system-ui, sans-serif;
   --font-display: "Syne", system-ui, sans-serif;
   --font-numeric: "JetBrains Mono", ui-monospace, monospace;
+
+  /* In-app pages: one column, flat surfaces, shared rhythm */
+  --app-max-width: 1080px;
+  --app-pad-x: clamp(16px, 4vw, 28px);
+  --app-stack-gap: 22px;
+  --app-surface-radius: 10px;
+  --app-surface-border: 1px solid var(--border-medium);
+  --app-card-pad-y: 22px;
+  --app-card-pad-x: 24px;
 }
 
 /* ===== LIGHT: warm paper + deep slate accent ===== */
@@ -140,6 +149,7 @@ h3,
 
 #root {
   min-height: 100vh;
+  background: var(--bg-main);
 }
 
 /* ================= LANDING PAGE ================= */
@@ -384,23 +394,26 @@ h3,
   }
 }
 
-/* ================= LOGIN PAGE ================= */
+/* ================= LOGIN / SIGNUP (aligned with app shell) ================= */
 .login-container {
   min-height: 100vh;
-  padding: 24px;
+  width: 100%;
+  padding: var(--app-pad-x);
   display: flex;
   justify-content: center;
   align-items: center;
+  box-sizing: border-box;
+  background: var(--bg-main);
 }
 
 .login-card {
   width: 100%;
-  max-width: 480px;
-  padding: 46px;
-  border-radius: var(--radius-card);
-  background: linear-gradient(180deg, var(--card-gradient-start), var(--card-gradient-end));
-  border: 1px solid var(--card-border);
-  box-shadow: 0 60px 120px var(--shadow-strong), inset 0 1px 0 var(--border-subtle);
+  max-width: min(440px, 100%);
+  padding: 40px 36px;
+  border-radius: var(--app-surface-radius);
+  background: var(--bg-surface);
+  border: var(--app-surface-border);
+  box-shadow: 0 24px 48px var(--shadow-soft);
 }
 
 /* Brand text */
@@ -561,20 +574,27 @@ h3,
   color: var(--text-dark);
 }
 
-/* ================= DASHBOARD LAYOUT ================= */
-/* Page padding */
+/* ================= APP PAGES: .container = single scroll, uniform gaps ================= */
 .container {
-  padding: 36px;
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  padding: var(--app-stack-gap) var(--app-pad-x) calc(var(--app-stack-gap) * 2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-stack-gap);
+  box-sizing: border-box;
+  background: transparent;
 }
 
-/* ================= COMMON CARD ================= */
+/* Flat panel — same radius/border as the rest of the app (not “floating card soup”) */
 .card {
-  background: linear-gradient(180deg, var(--bg-gradient-start), var(--bg-gradient-end));
-  border-radius: var(--radius-card);
-  padding: 28px;
-  margin-bottom: 28px;
-  border: 1px solid var(--accent-border);
-  box-shadow: 0 0 0 1px var(--border-strong), 0 18px 45px var(--shadow-soft), inset 0 1px 0 var(--border-subtle);
+  background: var(--bg-surface);
+  border-radius: var(--app-surface-radius);
+  padding: var(--app-card-pad-y) var(--app-card-pad-x);
+  margin-bottom: 0;
+  border: var(--app-surface-border);
+  box-shadow: none;
 }
 
 /* Headings inside cards */
@@ -582,9 +602,11 @@ h3,
 .card h3,
 .card h4 {
   margin-top: 0;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -594,8 +616,12 @@ h3,
 .analytics-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  margin-bottom: 28px;
+  gap: var(--app-stack-gap);
+  margin-bottom: 0;
+}
+
+.analytics-row > .dashboard-header {
+  grid-column: 1 / -1;
 }
 
 /* Chart containers */
@@ -641,19 +667,19 @@ tr:hover td {
 
 /* Rounded table corners */
 table tr:first-child th:first-child {
-  border-top-left-radius: 12px;
+  border-top-left-radius: var(--radius-tight);
 }
 
 table tr:first-child th:last-child {
-  border-top-right-radius: 12px;
+  border-top-right-radius: var(--radius-tight);
 }
 
 table tr:last-child td:first-child {
-  border-bottom-left-radius: 12px;
+  border-bottom-left-radius: var(--radius-tight);
 }
 
 table tr:last-child td:last-child {
-  border-bottom-right-radius: 12px;
+  border-bottom-right-radius: var(--radius-tight);
 }
 
 /* ================= ALERTS ================= */
@@ -670,10 +696,6 @@ table tr:last-child td:last-child {
 @media (max-width: 900px) {
   .analytics-row {
     grid-template-columns: 1fr;
-  }
-
-  .container {
-    padding: 24px;
   }
 }
 
@@ -1931,21 +1953,12 @@ table tr:last-child td:last-child {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 28px;
-  padding: 22px 26px;
-  border-radius: 18px;
-
-  background: linear-gradient(
-    135deg,
-    var(--bg-gradient-start),
-    var(--bg-gradient-end)
-  );
-
-  border: 1px solid var(--card-border);
-  box-shadow:
-    0 0 0 1px var(--border-subtle),
-    0 20px 45px var(--shadow-soft),
-    inset 0 1px 0 var(--border-subtle);
+  margin-bottom: 0;
+  padding: 18px 22px;
+  border-radius: var(--app-surface-radius);
+  background: var(--bg-surface);
+  border: var(--app-surface-border);
+  box-shadow: none;
 }
 
 /* Left Side */
@@ -2225,23 +2238,18 @@ table tr:last-child td:last-child {
 
 /* ================= FORECAST / PREDICT (ADMIN) ================= */
 .container.presentation-wrap {
-  max-width: 1080px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-top: 28px;
-  padding-bottom: 48px;
+  max-width: var(--app-max-width);
 }
 
 .presentation-hero {
   position: relative;
   overflow: hidden;
-  margin-bottom: 24px;
-  padding: 32px 36px;
-  border: 1px solid var(--accent-border);
-  box-shadow:
-    0 0 0 1px var(--border-strong),
-    0 24px 56px var(--shadow-soft),
-    inset 0 1px 0 var(--border-subtle);
+  margin-bottom: 0;
+  padding: 26px 28px;
+  border-radius: var(--app-surface-radius);
+  background: var(--bg-surface);
+  border: var(--app-surface-border);
+  box-shadow: none;
 }
 
 .presentation-hero::before {
@@ -2251,11 +2259,12 @@ table tr:last-child td:last-child {
   background: linear-gradient(
     135deg,
     var(--accent-glow-primary) 0%,
-    transparent 42%,
+    transparent 50%,
     transparent 100%
   );
   pointer-events: none;
-  opacity: 0.85;
+  opacity: 0.4;
+  border-radius: inherit;
 }
 
 .presentation-hero > * {
@@ -2295,8 +2304,8 @@ table tr:last-child td:last-child {
 }
 
 .presentation-form-card {
-  margin-bottom: 24px;
-  padding: 32px 36px;
+  margin-bottom: 0;
+  padding: 26px 28px;
 }
 
 .presentation-form-card > h3 {
@@ -2688,13 +2697,12 @@ table tr:last-child td:last-child {
 }
 
 .retailer-plain-card {
-  margin-bottom: 24px;
-  padding: 32px 36px;
-  border: 1px solid var(--accent-border);
-  box-shadow:
-    0 0 0 1px var(--border-strong),
-    0 20px 48px var(--shadow-soft),
-    inset 0 1px 0 var(--border-subtle);
+  margin-bottom: 0;
+  padding: 26px 28px;
+  border-radius: var(--app-surface-radius);
+  background: var(--bg-surface);
+  border: var(--app-surface-border);
+  box-shadow: none;
 }
 
 .retailer-plain-title {
@@ -2798,16 +2806,9 @@ table tr:last-child td:last-child {
 }
 
 .card.presentation-kpi.kpi-accent {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--accent-border));
-  background: linear-gradient(
-    160deg,
-    var(--accent-glow-primary) 0%,
-    var(--bg-gradient-end) 55%
-  );
-  box-shadow:
-    0 0 0 1px var(--border-strong),
-    0 18px 40px var(--shadow-soft),
-    inset 0 1px 0 var(--border-subtle);
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent-glow-primary) 60%, var(--bg-surface));
+  box-shadow: none;
 }
 
 .card.presentation-kpi .kpi-label {
@@ -3430,7 +3431,7 @@ table {
   .login-card {
     width: 100% !important;
     padding: 32px 20px !important;
-    border-radius: 16px !important;
+    border-radius: var(--app-surface-radius) !important;
   }
 }
 

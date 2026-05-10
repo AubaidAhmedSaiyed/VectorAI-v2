@@ -22,7 +22,7 @@ function Intelligence({ toggleTheme }) {
       <DashboardNavbar toggleTheme={toggleTheme} />
 
       <div className="container">
-        <div className="card" style={{ marginBottom: "1rem" }}>
+        <div className="card">
           <h3>Demand forecast &amp; shop advice (admin)</h3>
           <p style={{ marginBottom: "12px", color: "var(--text-muted)" }}>
             Plain-language stock and order tips, charts, and optional technical detail — logged in{" "}
