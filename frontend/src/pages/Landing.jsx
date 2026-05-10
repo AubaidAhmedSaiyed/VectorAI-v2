@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Analytics from "../components/Analytics";
-import SalesPredictionChart from "../components/SalesPredictionChart";
 import Forecast from "../components/Forecast";
 import Footer from "../components/Footer";
 import {
@@ -13,14 +12,76 @@ import {
 import {
   TrendingUp,
   Boxes,
-  BarChart3,
   Bell,
-  CircleDollarSign,
-  Leaf,
-  Zap,
-  Radar,
-  Mail
+  Mail,
+  LineChart,
+  Package,
+  Clock,
+  ShieldCheck,
 } from "lucide-react";
+
+/** Each block = one scroll target; UI panel reuses the same demo components as before the hero mock was removed. */
+const DASHBOARD_FEATURE_SECTIONS = [
+  {
+    id: "features",
+    featureKey: "AI Prediction",
+    kicker: "Forecast",
+    title: "AI Prediction",
+    description:
+      "Project weekly demand from your sales history so purchasing and promos follow a signal—not a hunch.",
+  },
+  {
+    id: "feature-sales-analysis",
+    featureKey: "Sales Analysis",
+    kicker: "Performance",
+    title: "Sales Analysis",
+    description:
+      "Track revenue and margin over time with the same numbers your floor already records—no extra exports.",
+  },
+  {
+    id: "feature-smart-inventory",
+    featureKey: "Smart Inventory",
+    kicker: "Bundles",
+    title: "Smart Inventory",
+    description:
+      "Pair slow movers with bestsellers using live quantities and pricing to surface bundles that clear stock.",
+  },
+  {
+    id: "feature-expiry-alerts",
+    featureKey: "Expiry Alerts",
+    kicker: "Safety net",
+    title: "Expiry Alerts",
+    description:
+      "Surface batches nearing expiry before they hit shrink, with room to discount or move product early.",
+  },
+];
+
+const BENEFIT_ITEMS = [
+  {
+    title: "Fewer stock-outs",
+    description:
+      "Align orders and promos with predicted demand so bestsellers stay on the shelf when traffic spikes.",
+    Icon: Package,
+  },
+  {
+    title: "Less shrink & spoilage",
+    description:
+      "Catch expiring batches and slow movers earlier—discount or bundle before they become write-offs.",
+    Icon: ShieldCheck,
+  },
+  {
+    title: "Clearer performance",
+    description:
+      "One view of sales, margin, and inventory so weekly reviews are minutes, not spreadsheet archaeology.",
+    Icon: LineChart,
+  },
+  {
+    title: "Faster reactions",
+    description:
+      "Alerts and forecasts update with your data so staff and managers act in time—not after the fact.",
+    Icon: Clock,
+  },
+];
 
 function Landing({ toggleTheme, theme }) {
   const navigate = useNavigate();
@@ -28,7 +89,6 @@ function Landing({ toggleTheme, theme }) {
 
   /* ===== TYPING LOGIC ===== */
   const [typedText, setTypedText] = useState("");
-  const [activeFeature, setActiveFeature] = useState("AI Prediction");
 
   useEffect(() => {
     let index = 0;
@@ -38,27 +98,26 @@ function Landing({ toggleTheme, theme }) {
       if (index === fullText.length) clearInterval(interval);
     }, 120);
 
+    return () => clearInterval(interval);
+  }, [fullText]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("visible");
-            // Optional: observer.unobserve(entry.target) if you only want it to animate once
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.15 }
+      { root: null, rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
     );
 
-    const elements = document.querySelectorAll(".reveal-on-scroll");
-    elements.forEach((el) => observer.observe(el));
+    document.querySelectorAll(".reveal-on-scroll").forEach((el) => observer.observe(el));
 
-    return () => {
-      clearInterval(interval);
-      observer.disconnect();
-    };
-  }, [fullText]);
+    return () => observer.disconnect();
+  }, []);
 
   /* ===== DEMO STOCK ===== */
   const demoStock = [
@@ -70,8 +129,8 @@ function Landing({ toggleTheme, theme }) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const renderMockContent = () => {
-    switch (activeFeature) {
+  const renderFeaturePanel = (featureKey) => {
+    switch (featureKey) {
       case "Sales Analysis":
         return (
           <div className="modern-feature-card">
@@ -82,7 +141,7 @@ function Landing({ toggleTheme, theme }) {
                 <p className="modern-feature-desc">Track your revenue and profit margins over time.</p>
               </div>
             </div>
-            <div style={{ height: '200px', width: '100%', marginTop: '24px' }}>
+            <div style={{ height: "200px", width: "100%", marginTop: "24px" }}>
               <Analytics stock={demoStock} theme={theme} />
             </div>
           </div>
@@ -90,6 +149,7 @@ function Landing({ toggleTheme, theme }) {
 
       case "AI Prediction":
         return <Forecast theme={theme} />;
+
       case "Smart Inventory":
         return (
           <div className="modern-feature-card">
@@ -100,28 +160,73 @@ function Landing({ toggleTheme, theme }) {
                 <p className="modern-feature-desc">Real-time insights and automated bundle suggestions.</p>
               </div>
             </div>
-            <div className="mock-data-card" style={{ marginTop: '24px', background: 'var(--bg-main)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-              <div className="bundle-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>Men’s Cotton Shirt</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  <span className="numeric" style={{ color: 'var(--accent)' }}>48</span> units · ₹
-                  <span className="numeric">599</span>
+            <div
+              className="mock-data-card"
+              style={{
+                marginTop: "24px",
+                background: "var(--bg-main)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-ui)",
+                padding: "20px",
+              }}
+            >
+              <div
+                className="bundle-item"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid var(--border-subtle)",
+                }}
+              >
+                <span style={{ fontWeight: 500, color: "var(--text-main)" }}>Men’s Cotton Shirt</span>
+                <span style={{ color: "var(--text-muted)" }}>
+                  <span className="numeric" style={{ color: "var(--accent)" }}>
+                    48
+                  </span>{" "}
+                  units · ₹<span className="numeric">599</span>
                 </span>
               </div>
-              <div className="bundle-plus" style={{ textAlign: 'center', margin: '10px 0', color: 'var(--text-muted)' }}>+</div>
-              <div className="bundle-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>Chino Pants</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  <span className="numeric" style={{ color: 'var(--accent)' }}>32</span> units · ₹
-                  <span className="numeric">799</span>
+              <div className="bundle-plus" style={{ textAlign: "center", margin: "10px 0", color: "var(--text-muted)" }}>
+                +
+              </div>
+              <div
+                className="bundle-item"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid var(--border-subtle)",
+                }}
+              >
+                <span style={{ fontWeight: 500, color: "var(--text-main)" }}>Chino Pants</span>
+                <span style={{ color: "var(--text-muted)" }}>
+                  <span className="numeric" style={{ color: "var(--accent)" }}>
+                    32
+                  </span>{" "}
+                  units · ₹<span className="numeric">799</span>
                 </span>
               </div>
-              <div className="bundle-result" style={{ marginTop: '20px', padding: '16px', background: 'var(--accent-glow-secondary)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ color: 'var(--accent-strong)' }}>
+              <div
+                className="bundle-result"
+                style={{
+                  marginTop: "20px",
+                  padding: "16px",
+                  background: "var(--accent-glow-secondary)",
+                  borderRadius: "var(--radius-tight)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <strong style={{ color: "var(--accent-strong)" }}>
                   Suggested Bundle: ₹<span className="numeric">899</span>
                 </strong>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                  Clearance rate: <span className="numeric" style={{ color: 'var(--accent)' }}>+45%</span>
+                <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+                  Clearance rate:{" "}
+                  <span className="numeric" style={{ color: "var(--accent)" }}>
+                    +45%
+                  </span>
                 </span>
               </div>
             </div>
@@ -132,23 +237,57 @@ function Landing({ toggleTheme, theme }) {
         return (
           <div className="modern-feature-card">
             <div className="modern-feature-header">
-              <div className="modern-feature-icon-wrapper" style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)' }}><Bell size={24} /></div>
+              <div
+                className="modern-feature-icon-wrapper"
+                style={{ background: "var(--status-danger-bg)", color: "var(--status-danger-text)" }}
+              >
+                <Bell size={24} />
+              </div>
               <div>
                 <h3 className="modern-feature-title">Expiry Alerts</h3>
                 <p className="modern-feature-desc">Automatically detect soon-to-expire batches.</p>
               </div>
             </div>
-            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="alert animate-tagline" style={{ padding: '16px', borderRadius: '12px', background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.2rem' }}>⚠️</span> 
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div
+                className="alert"
+                style={{
+                  padding: "16px",
+                  borderRadius: "var(--radius-ui)",
+                  background: "var(--status-danger-bg)",
+                  color: "var(--status-danger-text)",
+                  border: "1px solid color-mix(in srgb, var(--accent-warm) 35%, transparent)",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }} aria-hidden>
+                  ⚠️
+                </span>
                 <div>
-                    <strong>Critical:</strong> 15 units of Organic Milk expiring in 3 days. <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>Apply 20% discount</span>.
+                  <strong>Critical:</strong> 15 units of Organic Milk expiring in 3 days.{" "}
+                  <span style={{ textDecoration: "underline", cursor: "pointer" }}>Apply 20% discount</span>.
                 </div>
               </div>
-              <div className="alert animate-support" style={{ padding: '16px', borderRadius: '12px', background: 'rgba(251, 146, 60, 0.1)', color: '#fb923c', border: '1px solid rgba(251, 146, 60, 0.2)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <span style={{ fontSize: '1.2rem' }}>🔔</span> 
+              <div
+                className="alert"
+                style={{
+                  padding: "16px",
+                  borderRadius: "var(--radius-ui)",
+                  background: "color-mix(in srgb, var(--accent-warm) 10%, transparent)",
+                  color: "var(--accent-warm)",
+                  border: "1px solid color-mix(in srgb, var(--accent-warm) 28%, transparent)",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }} aria-hidden>
+                  🔔
+                </span>
                 <div>
-                    <strong>Notice:</strong> 40 units of Wheat Bread expiring in 7 days.
+                  <strong>Notice:</strong> 40 units of Wheat Bread expiring in 7 days.
                 </div>
               </div>
             </div>
@@ -163,9 +302,8 @@ function Landing({ toggleTheme, theme }) {
     <div className="landing-page">
       <Navbar toggleTheme={toggleTheme} />
 
-      {/* ================= HERO & DASHBOARD MOCKUP ================= */}
-      <section className="dashboard-hero-section modern-hero">
-        {/* Soft animated background elements */}
+      {/* ================= HERO ================= */}
+      <section className="dashboard-hero-section modern-hero landing-hero-simple">
         <div className="hero-glow-blob"></div>
         <div className="hero-glow-blob-alt"></div>
 
@@ -192,87 +330,53 @@ function Landing({ toggleTheme, theme }) {
             </button>
             <button
               className="ghost-btn-link"
-              onClick={() => handleScroll('features')}
+              onClick={() => handleScroll("features")}
             >
               Learn More
             </button>
           </div>
         </div>
-
-        {/* Dashboard Mockup (based on sketch) */}
-        <div className="mock-dashboard-wrapper modern-dashboard animate-cta">
-          {/* Left Sidebar */}
-          <div className="mock-sidebar modern-sidebar">
-             <div className="mock-sidebar-title" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', margin: '10px 0 20px 14px', fontWeight: 600 }}>Dashboard Features</div>
-             
-             <div 
-               className={`modern-sidebar-item ${activeFeature === "AI Prediction" ? "active" : ""}`}
-               onClick={() => setActiveFeature("AI Prediction")}
-             >
-               <Radar size={20} />
-               <span>AI Prediction</span>
-             </div>
-
-             <div 
-               className={`modern-sidebar-item ${activeFeature === "Sales Analysis" ? "active" : ""}`}
-               onClick={() => setActiveFeature("Sales Analysis")}
-             >
-               <TrendingUp size={20} />
-               <span>Sales Analysis</span>
-             </div>
-
-             <div 
-               className={`modern-sidebar-item ${activeFeature === "Smart Inventory" ? "active" : ""}`}
-               onClick={() => setActiveFeature("Smart Inventory")}
-             >
-               <Boxes size={20} />
-               <span>Smart Inventory</span>
-             </div>
-
-             <div 
-               className={`modern-sidebar-item ${activeFeature === "Expiry Alerts" ? "active" : ""}`}
-               onClick={() => setActiveFeature("Expiry Alerts")}
-             >
-               <Bell size={20} />
-               <span>Expiry Alerts</span>
-             </div>
-          </div>
-
-          {/* Right Main Content */}
-          <div className="mock-content modern-content">
-             {renderMockContent()}
-          </div>
-        </div>
       </section>
 
+      {/* ================= DASHBOARD FEATURES — zig-zag: text | UI, then UI | text ================= */}
+      {DASHBOARD_FEATURE_SECTIONS.map((item, index) => {
+        const flipUiLeft = index % 2 === 1;
+        return (
+          <section
+            key={item.id}
+            id={item.id}
+            className={`section landing-feature-section landing-feature-zigzag reveal-on-scroll${flipUiLeft ? " alt-section landing-feature-zigzag--flip" : ""}`}
+          >
+            <div className="landing-feature-inner">
+              <div className="landing-feature-copy">
+                <p className="landing-feature-kicker">{item.kicker}</p>
+                <h2 className="section-title landing-feature-title">{item.title}</h2>
+                <p className="section-text landing-feature-lead">{item.description}</p>
+              </div>
+              <div className="landing-feature-ui">
+                <div className="landing-feature-mock">{renderFeaturePanel(item.featureKey)}</div>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+
       {/* ================= BENEFITS ================= */}
-      <section id="features" className="section reveal-on-scroll">
-        <h2 className="section-title">Drive Real Results</h2>
-
-        <div className="modern-card-grid">
-          <div className="modern-feature-card">
-            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><CircleDollarSign size={26} /></div>
-            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Increase Profit</h3>
-            <p className="modern-feature-desc">Optimize pricing and sell more at the right time.</p>
-          </div>
-
-          <div className="modern-feature-card">
-            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Leaf size={26} /></div>
-            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Reduce Stock Waste</h3>
-            <p className="modern-feature-desc">Clear expiring items before they become losses.</p>
-          </div>
-
-          <div className="modern-feature-card">
-            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Zap size={26} /></div>
-            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Faster Decisions</h3>
-            <p className="modern-feature-desc">Skip the spreadsheets. Get AI-backed insights instantly.</p>
-          </div>
-
-          <div className="modern-feature-card">
-            <div className="modern-feature-icon-wrapper" style={{ marginBottom: '16px' }}><Radar size={26} /></div>
-            <h3 className="modern-feature-title" style={{ marginBottom: '8px' }}>Always Up-to-Date</h3>
-            <p className="modern-feature-desc">Real-time alerts keep your team acting proactively.</p>
-          </div>
+      <section id="benefits" className="section landing-benefits-section reveal-on-scroll">
+        <h2 className="section-title">Benefits for your store</h2>
+        <p className="section-text">
+          These capabilities are built to save time, cut waste, and make every shift a little more predictable.
+        </p>
+        <div className="landing-benefits-grid">
+          {BENEFIT_ITEMS.map(({ title, description, Icon }) => (
+            <article key={title} className="landing-benefit-card">
+              <div className="landing-benefit-icon" aria-hidden>
+                <Icon size={22} strokeWidth={2} />
+              </div>
+              <h3 className="landing-benefit-title">{title}</h3>
+              <p className="landing-benefit-desc">{description}</p>
+            </article>
+          ))}
         </div>
       </section>
 

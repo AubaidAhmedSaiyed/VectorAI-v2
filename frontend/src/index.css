@@ -11,11 +11,14 @@ html, body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-text, "Outfit", system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent, #8fa3b8) 35%, transparent);
+  color: var(--text-main, #f4f1ea);
 }
 
 code {
@@ -103,7 +106,7 @@ code {
 .modern-navbar-enhanced .nav-primary-btn {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong)) !important;
   border-radius: 12px !important;
-  color: #fff !important;
+  color: var(--on-accent, #0a090c) !important;
   padding: 10px 24px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 14px var(--accent-shadow) !important;
@@ -373,16 +376,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* --- REVEAL ANIMATIONS (fade-in on sections) --- */
-.reveal-on-scroll {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 1s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-.reveal-on-scroll.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+/* --- REVEAL: defined in App.css (content stays visible) --- */
 
 /* --- CONTACT FORM ENHANCEMENTS --- */
 .contact-highlight.section {
@@ -445,7 +439,7 @@ html {
   padding: 16px !important;
   border-radius: 12px !important;
   background: linear-gradient(135deg, var(--accent), var(--accent-strong)) !important;
-  color: #fff !important;
+  color: var(--on-accent, #0a090c) !important;
   border: none !important;
   font-weight: 600 !important;
   font-size: 16px !important;

@@ -154,8 +154,8 @@ function Predict({ toggleTheme, theme = "dark" }) {
   const [accError, setAccError] = useState("");
 
   const isLight = theme === "light";
-  const textMuted = isLight ? "#64748b" : "#94a3b8";
-  const textMain = isLight ? "#0f172a" : "#e5e7eb";
+  const textMuted = isLight ? "#7a7385" : "#9d948a";
+  const textMain = isLight ? "#16131a" : "#f4f1ea";
   const gridColor = isLight ? "rgba(15,23,42,0.06)" : "rgba(255,255,255,0.06)";
 
   const chartOptions = useMemo(
@@ -165,13 +165,13 @@ function Predict({ toggleTheme, theme = "dark" }) {
       plugins: {
         legend: {
           position: "top",
-          labels: { color: textMain, font: { family: "'Poppins', sans-serif" } },
+          labels: { color: textMain, font: { family: "'Outfit', sans-serif" } },
         },
         title: {
           display: true,
           text: "Next 4 weeks — forecast demand (units)",
           color: textMain,
-          font: { size: 16, family: "'Poppins', sans-serif" },
+          font: { size: 16, family: "'Outfit', sans-serif" },
         },
         tooltip: { mode: "index", intersect: false },
       },
@@ -213,7 +213,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
           align: "center",
           labels: {
             color: textMain,
-            font: { family: "'Poppins', sans-serif", size: 12 },
+            font: { family: "'Outfit', sans-serif", size: 12 },
             padding: 24,
             boxWidth: 36,
             boxHeight: 4,
@@ -272,7 +272,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
           align: "center",
           labels: {
             color: textMain,
-            font: { family: "'Poppins', sans-serif", size: 12 },
+            font: { family: "'Outfit', sans-serif", size: 12 },
             padding: 22,
             boxWidth: 14,
             boxHeight: 14,
@@ -282,7 +282,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
           display: true,
           text: "Four-week total demand — smart vs simple plan",
           color: textMain,
-          font: { size: 16, family: "'Poppins', sans-serif" },
+          font: { size: 16, family: "'Outfit', sans-serif" },
         },
         tooltip: {
           mode: "index",
@@ -402,7 +402,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
       {
         label: "Smarter forecast (AI or trend)",
         data: ml.map((p) => p.forecast),
-        borderColor: "#2ec4b6",
+        borderColor: isLight ? "#4a6679" : "#8fa3b8",
         backgroundColor: "rgba(46, 196, 182, 0.15)",
         borderWidth: 3,
         tension: 0.35,
@@ -666,7 +666,7 @@ function Predict({ toggleTheme, theme = "dark" }) {
               <h2 className="retailer-plain-title">What this means for your shop</h2>
               <p className="retailer-plain-lead">
                 Short read — no jargon. We&apos;re estimating <strong>future demand</strong> (what to stock for), not
-                restating old sales. Orange = demand if every week looked like last week; teal = smarter demand pattern.
+                restating old sales. Orange = demand if every week looked like last week; steel line = smarter demand pattern.
               </p>
 
               {retailer.totalSmart != null && (

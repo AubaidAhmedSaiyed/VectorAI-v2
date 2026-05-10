@@ -33,8 +33,8 @@ function InventoryBar({ stock }) {
       {
         label: "Stock Quantity",
         data: topItems.map(item => item.quantity),
-        backgroundColor: "#06b6d4",
-        borderRadius: 6,
+        backgroundColor: "#8fa3b8",
+        borderRadius: 4,
       },
     ],
   };
@@ -45,14 +45,14 @@ function InventoryBar({ stock }) {
     plugins: {
       legend: {
         labels: {
-          color: "#e5e7eb",
+          color: "#f4f1ea",
         },
       },
     },
     scales: {
       x: {
         ticks: {
-          color: "#9ca3af",
+          color: "#9d948a",
         },
         grid: {
           display: false,
@@ -60,7 +60,7 @@ function InventoryBar({ stock }) {
       },
       y: {
         ticks: {
-          color: "#9ca3af",
+          color: "#9d948a",
         },
         grid: {
           color: "rgba(255,255,255,0.05)",

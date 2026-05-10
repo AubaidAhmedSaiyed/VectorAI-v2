@@ -22,7 +22,7 @@ ChartJS.register(
 );
 
 // ✅ GLOBAL CHART FONT CONFIG
-ChartJS.defaults.font.family = "'Poppins', sans-serif";
+ChartJS.defaults.font.family = "'Outfit', sans-serif";
 
 function SalesPredictionChart({ theme = "dark", isStatic = false }) {
   const [dataPoints, setDataPoints] = useState([]);
@@ -78,9 +78,11 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
   }, [isStatic]);
 
   const hasLight = theme === "light";
-  const textColor = hasLight ? "#64748b" : "#9ca3af";
+  const textColor = hasLight ? "#7a7385" : "#9d948a";
   const gridColor = hasLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)";
-  const legendColor = hasLight ? "#0f172a" : "#e5e7eb";
+  const legendColor = hasLight ? "#16131a" : "#f4f1ea";
+  const actualColor = hasLight ? "#4a6679" : "#8fa3b8";
+  const predictedColor = hasLight ? "#a86056" : "#c9867a";
 
   const labels = dataPoints.map(d => d.week);
   const actualSales = dataPoints.map(d => d.sales);
@@ -92,8 +94,8 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
       {
         label: "Actual Sales (₹)",
         data: actualSales,
-        borderColor: "#06b6d4", // Cyan
-        backgroundColor: "rgba(6,182,212,0.15)",
+        borderColor: actualColor,
+        backgroundColor: hasLight ? "rgba(74, 102, 121, 0.1)" : "rgba(143, 163, 184, 0.12)",
         borderWidth: 2.5,
         tension: 0.4,
         pointRadius: 3,
@@ -102,8 +104,8 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
       {
         label: "Predicted Sales (₹)",
         data: predictedSales,
-        borderColor: "#f59e0b", // Amber/Orange to match dark+teal theme accent
-        backgroundColor: "rgba(245,158,11,0.1)",
+        borderColor: predictedColor,
+        backgroundColor: hasLight ? "rgba(168, 96, 86, 0.1)" : "rgba(201, 134, 122, 0.1)",
         borderWidth: 2.5,
         borderDash: [5, 5], // Dashed line for prediction
         tension: 0.4,
@@ -128,18 +130,18 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
           usePointStyle: true,
           pointStyle: "line",
           font: {
-            family: "'Poppins', sans-serif",
+            family: "'Outfit', sans-serif",
           },
         },
       },
       tooltip: {
-        backgroundColor: hasLight ? "#ffffff" : "#0f172a",
-        titleColor: hasLight ? "#0f172a" : "#f1f5f9",
-        bodyColor: hasLight ? "#334155" : "#cbd5e1",
-        borderColor: hasLight ? "#e2e8f0" : "rgba(255,255,255,0.1)",
+        backgroundColor: hasLight ? "#fffcf7" : "#100e16",
+        titleColor: hasLight ? "#16131a" : "#f4f1ea",
+        bodyColor: hasLight ? "#4a4456" : "#c9c2b6",
+        borderColor: hasLight ? "#ddd2c6" : "rgba(255,255,255,0.1)",
         borderWidth: 1,
-        titleFont: { family: "'Poppins', sans-serif", size: 12 },
-        bodyFont: { family: "'Baloo Bhai 2', cursive", size: 13 },
+        titleFont: { family: "'Outfit', sans-serif", size: 12 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
         callbacks: {
           label: (ctx) => `₹ ${ctx.raw ? Math.round(ctx.raw).toLocaleString() : 0}`,
         },
@@ -149,14 +151,14 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
       x: {
         ticks: {
           color: textColor,
-          font: { family: "'Poppins', sans-serif", size: 11 },
+          font: { family: "'Outfit', sans-serif", size: 11 },
         },
         grid: { display: false },
       },
       y: {
         ticks: {
           color: textColor,
-          font: { family: "'Baloo Bhai 2', cursive", size: 11 },
+          font: { family: "'JetBrains Mono', monospace", size: 11 },
           callback: (value) => `₹${Number(value).toLocaleString()}`,
         },
         grid: { color: gridColor },

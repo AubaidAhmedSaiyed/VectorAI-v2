@@ -22,7 +22,7 @@ ChartJS.register(
 );
 
 // ✅ GLOBAL CHART FONT CONFIG (Using CSS variables via JS)
-ChartJS.defaults.font.family = "'Poppins', sans-serif"; // Default text
+ChartJS.defaults.font.family = "'Outfit', sans-serif";
 
 
 
@@ -60,9 +60,11 @@ function Analytics({ stock, theme = "dark" }) {
   ];
 
   const hasLight = theme === "light";
-  const textColor = hasLight ? "#64748b" : "#9ca3af";
+  const textColor = hasLight ? "#7a7385" : "#9d948a";
   const gridColor = hasLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)";
-  const legendColor = hasLight ? "#0f172a" : "#e5e7eb";
+  const legendColor = hasLight ? "#16131a" : "#f4f1ea";
+  const linePrimary = hasLight ? "#4a6679" : "#8fa3b8";
+  const lineSecondary = hasLight ? "#a86056" : "#c9867a";
 
   const data = {
     labels,
@@ -70,8 +72,8 @@ function Analytics({ stock, theme = "dark" }) {
       {
         label: "Sales (₹)",
         data: salesTrend,
-        borderColor: "#06b6d4", // Cyan
-        backgroundColor: "rgba(6,182,212,0.15)",
+        borderColor: linePrimary,
+        backgroundColor: hasLight ? "rgba(74, 102, 121, 0.1)" : "rgba(143, 163, 184, 0.12)",
         borderWidth: 2.5,
         tension: 0.4,
         pointRadius: 0,
@@ -80,8 +82,8 @@ function Analytics({ stock, theme = "dark" }) {
       {
         label: "Profit (₹)",
         data: profitTrend,
-        borderColor: "#10b981", // Emerald
-        backgroundColor: "rgba(16,185,129,0.12)",
+        borderColor: lineSecondary,
+        backgroundColor: hasLight ? "rgba(168, 96, 86, 0.1)" : "rgba(201, 134, 122, 0.1)",
         borderWidth: 2.5,
         tension: 0.4,
         pointRadius: 0,
@@ -101,21 +103,21 @@ function Analytics({ stock, theme = "dark" }) {
           usePointStyle: true,
           pointStyle: "line",
           font: {
-            family: "'Poppins', sans-serif", // Legends are text
+            family: "'Outfit', sans-serif",
           },
         },
       },
       tooltip: {
-        backgroundColor: hasLight ? "#ffffff" : "#0f172a",
-        titleColor: hasLight ? "#0f172a" : "#f1f5f9",
-        bodyColor: hasLight ? "#334155" : "#cbd5e1",
-        borderColor: hasLight ? "#e2e8f0" : "rgba(255,255,255,0.1)",
+        backgroundColor: hasLight ? "#fffcf7" : "#100e16",
+        titleColor: hasLight ? "#16131a" : "#f4f1ea",
+        bodyColor: hasLight ? "#4a4456" : "#c9c2b6",
+        borderColor: hasLight ? "#ddd2c6" : "rgba(255,255,255,0.1)",
         borderWidth: 1,
         titleFont: {
-          family: "'Poppins', sans-serif",
+          family: "'Outfit', sans-serif",
         },
         bodyFont: {
-          family: "'Baloo Bhai 2', cursive", // Tooltip numbers
+          family: "'JetBrains Mono', monospace",
           size: 14,
         },
         callbacks: {
@@ -131,7 +133,7 @@ function Analytics({ stock, theme = "dark" }) {
         ticks: {
           color: textColor, // Dynamic
           font: {
-            family: "'Poppins', sans-serif", // X-axis labels are weeks (text)
+            family: "'Outfit', sans-serif",
           },
         },
         grid: {
@@ -142,7 +144,7 @@ function Analytics({ stock, theme = "dark" }) {
         ticks: {
           color: textColor, // Dynamic
           font: {
-            family: "'Baloo Bhai 2', cursive", // Y-axis is money (numbers)
+            family: "'JetBrains Mono', monospace",
             size: 12,
           },
           callback: (value) =>
