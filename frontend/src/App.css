@@ -3182,3 +3182,596 @@ button[disabled] {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+/* ========================================================================= */
+/*                   TABLET & MOBILE RESPONSIVE FIXES                        */
+/* ========================================================================= */
+
+/* 1. Global Box Sizing & Horizontal Scroll Prevention */
+html, body, #root, .landing-page {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Ensure tables do not cause overflow layout breakage */
+table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* ==================================== */
+/*      TABLET (max-width: 768px)       */
+/* ==================================== */
+@media screen and (max-width: 768px) {
+  
+  /* Hero Section Elements */
+  .dashboard-hero-section.modern-hero {
+    padding: 6rem 5% 3rem !important;
+  }
+  
+  .flickr-title, h1.flickr-title {
+    font-size: 2.6rem !important;
+    line-height: 1.25 !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.15rem !important;
+    padding: 0 16px !important;
+  }
+  
+  .flickr-support {
+    padding: 0 20px !important;
+  }
+
+  /* Navbar Layout Adjustment */
+  .navbar.modern-navbar-enhanced {
+    padding: 1.2rem 5% !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    height: auto !important;
+  }
+  
+  .modern-navbar-enhanced .nav-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+    gap: 12px !important;
+  }
+  
+  .modern-navbar-enhanced .nav-links-wrapper {
+    margin-right: 0 !important;
+  }
+
+  /* Mock Dashboard & Sidebar Fixes */
+  .mock-dashboard-wrapper.modern-dashboard {
+    width: 95% !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  
+  .mock-sidebar.modern-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-medium) !important;
+    padding: 16px !important;
+  }
+  
+  .mock-content.modern-content {
+    padding: 24px !important;
+    overflow-x: hidden !important;
+  }
+  
+  .analytics-row {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  
+  /* Feature Grids */
+  .modern-card-grid, .card-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .showcase-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Contact Form */
+  .modern-contact-card {
+    padding: 32px !important;
+    width: 90% !important;
+    max-width: 100% !important;
+  }
+
+  /* Footer Layout Structure */
+  .footer-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 32px !important;
+  }
+}
+
+/* ==================================== */
+/*      MOBILE (max-width: 480px)       */
+/* ==================================== */
+@media screen and (max-width: 480px) {
+
+  /* Navbar Stacking */
+  .navbar.modern-navbar-enhanced {
+    padding: 1rem 16px !important;
+  }
+
+  .modern-navbar-enhanced .nav-actions,
+  .modern-navbar-enhanced .nav-links-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .modern-navbar-enhanced .nav-primary-btn,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* Hero Section Refinements */
+  .dashboard-hero-section.modern-hero {
+    padding: 5rem 16px 2rem !important;
+  }
+  
+  .flickr-title, h1.flickr-title {
+    font-size: 2rem !important;
+    letter-spacing: -0.5px !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* CTA Buttons - Force Full Width & Center */
+  .landing-cta {
+    flex-direction: column !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    padding: 0 16px !important;
+  }
+  
+  .cta-primary-large,
+  .ghost-btn-link,
+  .cta-primary,
+  .cta-secondary {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 14px 20px !important;
+    text-align: center !important;
+  }
+
+  /* Mock Dashboard Box Model Alignment */
+  .mock-dashboard-wrapper.modern-dashboard {
+    width: 100% !important;
+    border-radius: 16px !important;
+    margin: 0 !important;
+  }
+  
+  .mock-content.modern-content {
+    padding: 16px !important;
+  }
+  
+  .chart-box {
+    height: 250px !important;
+  }
+
+  /* Single Column Card Grid Constraint */
+  .modern-card-grid, .card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .modern-feature-card, .info-card {
+    padding: 20px !important;
+  }
+  
+  /* Align Icon and Title normally side by side or Stack properly */
+  .modern-feature-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  /* Full Screen Contact Form Adjustments */
+  .modern-contact-card {
+    width: 100% !important;
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+  
+  .contact-form {
+    padding: 0 !important;
+  }
+
+  .modern-contact-card input,
+  .modern-contact-card textarea,
+  .contact-form input,
+  .contact-form textarea {
+    padding: 14px 16px !important;
+    font-size: 14px !important;
+  }
+
+  .modern-contact-card button,
+  .contact-form button {
+    width: 100% !important;
+    padding: 14px !important;
+  }
+
+  /* Footer Stack Alignment */
+  .footer-container {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 0 16px !important;
+  }
+
+  /* Authentication Frame Reset */
+  .login-card {
+    width: 100% !important;
+    padding: 32px 20px !important;
+    border-radius: 16px !important;
+  }
+}
+
+
+/* ========================================================================= */
+/*                   PREMIUM VISUAL ENHANCEMENTS & EFFECTS                   */
+/* ========================================================================= */
+
+/* Global Smooth Scrolling */
+html, body {
+  scroll-behavior: smooth !important;
+}
+
+/* 1. Hero Section & Typography Enhancements */
+.flickr-title, h1.flickr-title {
+  /* Subtle gradient overlay on title */
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 4px 30px rgba(255, 255, 255, 0.1) !important;
+  letter-spacing: -0.5px !important;
+}
+[data-theme="light"] .flickr-title, [data-theme="light"] h1.flickr-title {
+  background: linear-gradient(135deg, var(--text-main) 30%, var(--accent-strong) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 4px 20px rgba(6, 182, 212, 0.15) !important;
+}
+
+.hero-subtitle {
+  letter-spacing: 0.3px !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 2. Buttons: Hover Effects, Lift & Glow */
+button, .nav-text-link {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.cta-primary, .cta-primary-large, .login-btn, .modern-contact-card button {
+  box-shadow: 0 4px 15px var(--accent-shadow) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.cta-primary:hover, .cta-primary-large:hover, .login-btn:hover, .modern-contact-card button:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  box-shadow: 0 10px 25px var(--accent-shadow-hover), 0 0 15px var(--accent-glow-primary) !important;
+  filter: brightness(1.1) !important;
+}
+
+.ghost-btn-link, .cta-secondary {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+}
+
+.ghost-btn-link:hover, .cta-secondary:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  background: var(--accent-glow-primary) !important;
+  box-shadow: 0 8px 20px var(--accent-shadow), inset 0 0 10px var(--accent-glow-secondary) !important;
+}
+
+/* 3. Cards & Dashboard: Soft Depth, Hover Lift & Borders */
+.modern-feature-card, .info-card, .dashboard-card, .trust-card, .mock-dashboard-wrapper.modern-dashboard {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  border-radius: 20px !important;
+  /* Add subtle initial glass shadow */
+  box-shadow: 0 8px 30px var(--shadow-soft), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.modern-feature-card:hover, .info-card:hover, .trust-card:hover, .dashboard-card:hover {
+  transform: translateY(-8px) scale(1.01) !important;
+  box-shadow: 0 20px 40px var(--shadow-strong), 0 0 20px var(--accent-glow-secondary) !important;
+  border-color: var(--accent) !important;
+}
+
+/* 4. Inputs / Forms: Focus Effects & Glow */
+input, textarea, select {
+  transition: all 0.3s ease !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: var(--accent) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 0 0 3px var(--accent-shadow), 0 4px 15px var(--accent-glow-secondary) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Enhance existing dashboard mockup background blur/glow */
+.mock-dashboard-wrapper.modern-dashboard {
+  background: linear-gradient(145deg, rgba(16, 22, 42, 0.85), rgba(13, 18, 34, 0.9)) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="light"] .mock-dashboard-wrapper.modern-dashboard {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(248, 250, 252, 0.9)) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Global Section spacing subtle enhancement */
+.section {
+  padding-top: 100px !important;
+  padding-bottom: 100px !important;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+  }
+}
+
+
+/* ========================================================================= */
+/*                   MOBILE NAVBAR VISUAL REFINEMENTS                        */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+
+  /* Shift from rigidly centered to a more structured left-aligned list where applicable */
+  .modern-navbar-enhanced .nav-actions,
+  .modern-navbar-enhanced .nav-links-wrapper {
+    align-items: stretch !important; /* Let children take full width naturally */
+    gap: 6px !important; /* Normalize vertical spacing */
+    margin-top: 4px !important;
+  }
+
+  /* Make text links left aligned or subtly spaced rather than hard center */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn {
+    text-align: left !important;
+    padding: 12px 14px !important;
+    width: 100% !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Hover states for links inside mobile nav */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover {
+    background: var(--glass-bg) !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Theme Toggle Fix - Remove oval/blur background, make it look like a text link row */
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 12px 14px !important;
+    border: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+  }
+  
+  .theme-toggle-btn:hover {
+    background: var(--glass-bg) !important;
+  }
+
+  /* Refine Sign Up Button */
+  .modern-navbar-enhanced .nav-primary-btn {
+    margin-top: 10px !important; /* Separation from regular links */
+    margin-bottom: 8px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    padding: 14px 0 !important;
+    text-align: center !important; /* Keep primary CTA centered */
+    box-shadow: 0 4px 12px var(--accent-shadow) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .modern-navbar-enhanced .nav-primary-btn:hover {
+    box-shadow: 0 6px 16px var(--accent-shadow-hover), 0 0 12px var(--accent-glow-primary) !important;
+    opacity: 0.95 !important;
+  }
+
+  /* Hide the underline interaction from desktop navbar links */
+  .modern-navbar-enhanced .nav-text-link::after {
+    display: none !important;
+  }
+
+  /* Keep brand styling clean */
+  .modern-navbar-enhanced .brand-text {
+    font-weight: 600 !important;
+  }
+}
+
+
+/* ========================================================================= */
+/*                   COHESIVE MOBILE MENU STRUCTURE REFINEMENT               */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+  /* Create an Apple-like cohesive menu container block for actions on mobile */
+  .modern-navbar-enhanced .nav-actions {
+    background: var(--glass-bg, rgba(255, 255, 255, 0.03)) !important;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05)) !important;
+    border-radius: 16px !important;
+    padding: 12px !important;
+    gap: 4px !important; /* tight inner spacing */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-actions {
+    background: rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  /* Reset inner wrapper since nav-actions is now the container */
+  .modern-navbar-enhanced .nav-links-wrapper {
+    gap: 4px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Unified menu item feel */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 14px 16px !important;
+    border-radius: 10px !important;
+    font-size: 1.05rem !important; /* solid hierarchy */
+    font-weight: 500 !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important; /* consistent default mapping */
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Remove stray elements breaking structure */
+  .theme-toggle-btn {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  
+  .modern-navbar-enhanced .nav-text-link::after {
+    display: none !important;
+  }
+
+  /* Unified active/hover row highlights (macOS style menu select) */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover,
+  .theme-toggle-btn:hover {
+    background: var(--glass-bg, rgba(255, 255, 255, 0.08)) !important;
+    color: var(--text-main) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-text-link:hover,
+  [data-theme="light"] .modern-navbar-enhanced .nav-link-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Sign up CTA Prominent distinctiveness but unified spacing */
+  .modern-navbar-enhanced .nav-primary-btn {
+    width: 100% !important;
+    margin-top: 12px !important; /* Visual separator gap */
+    padding: 14px 16px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important; /* Matches menu radius precisely */
+    font-size: 1.05rem !important;
+  }
+}
+
+
+/* ========================================================================= */
+/*                   MINIMAL LIGHTWEIGHT MOBILE NAVBAR REFINEMENT            */
+/* ========================================================================= */
+@media screen and (max-width: 480px) {
+  /* Remove heavy container background, border, and shadows */
+  .modern-navbar-enhanced .nav-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    gap: 8px !important; /* Breathable spacing */
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .modern-navbar-enhanced .nav-links-wrapper {
+    gap: 8px !important;
+  }
+
+  /* Clean, simple list items */
+  .modern-navbar-enhanced .nav-text-link,
+  .modern-navbar-enhanced .nav-link-btn,
+  .theme-toggle-btn {
+    width: 100% !important;
+    text-align: left !important;
+    padding: 12px 14px !important; /* Breathing room for hit area */
+    border-radius: 8px !important; /* Soft corners for app feel */
+    font-size: 1rem !important; /* Clean size */
+    font-weight: 500 !important;
+    background: transparent !important;
+    color: var(--text-main) !important; /* Main readable color */
+  }
+
+  /* Extremely light hover effects instead of strong block highlights */
+  .modern-navbar-enhanced .nav-text-link:hover,
+  .modern-navbar-enhanced .nav-link-btn:hover,
+  .theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: var(--text-main) !important;
+  }
+
+  [data-theme="light"] .modern-navbar-enhanced .nav-text-link:hover,
+  [data-theme="light"] .modern-navbar-enhanced .nav-link-btn:hover,
+  [data-theme="light"] .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+  }
+
+  /* Seamless CTA - prominent but clean without huge offsets or disjointedness */
+  .modern-navbar-enhanced .nav-primary-btn {
+    width: 100% !important;
+    margin-top: 10px !important; /* Soft separator */
+    padding: 14px 0 !important;
+    text-align: center !important;
+    border-radius: 999px !important; /* Standard pill shape */
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important; /* Much lighter shadow */
+  }
+}
