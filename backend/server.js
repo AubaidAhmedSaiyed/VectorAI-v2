@@ -1283,7 +1283,7 @@ app.get('/api/batches', asyncHandler(async (req, res) => {
 
   const [batches, total] = await Promise.all([
     Batch.find(filter)
-      .populate('product', 'name sku category')
+      .populate('product', 'name sku category sellingPrice costPrice')
       .sort({ expiryDate: 1 })
       .skip(skip).limit(limit).lean(),
     Batch.countDocuments(filter)

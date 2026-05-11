@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./App.css";
 
@@ -18,6 +18,8 @@ import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffReports from "./pages/staff/StaffReports";
 import StaffOrders from "./pages/staff/StaffOrders";
 import StaffStockManagement from "./pages/staff/StaffStockManagement";
+import StaffProcurement from "./pages/staff/StaffProcurement";
+import StaffIntelligence from "./pages/staff/StaffIntelligence";
 
 function App() {
   const [theme, setTheme] = React.useState(
@@ -81,18 +83,30 @@ function App() {
             element={<StaffDashboard toggleTheme={toggleTheme} theme={theme} />}
           />
           <Route
-            path="/staff/StaffOrders"
-            element={<StaffOrders toggleTheme={toggleTheme} theme={theme} />}
-          />
-          <Route
-            path="/staff/StaffReports"
-            element={<StaffReports toggleTheme={toggleTheme} theme={theme} />}
+            path="/staff/stock"
+            element={<StaffStockManagement toggleTheme={toggleTheme} theme={theme} />}
           />
           <Route
             path="/staff/StaffStockManagement"
-            element={
-              <StaffStockManagement toggleTheme={toggleTheme} theme={theme} />
-            }
+            element={<Navigate to="/staff/stock" replace />}
+          />
+          <Route
+            path="/staff/orders"
+            element={<StaffOrders toggleTheme={toggleTheme} theme={theme} />}
+          />
+          <Route path="/staff/StaffOrders" element={<Navigate to="/staff/orders" replace />} />
+          <Route
+            path="/staff/reports"
+            element={<StaffReports toggleTheme={toggleTheme} theme={theme} />}
+          />
+          <Route path="/staff/StaffReports" element={<Navigate to="/staff/reports" replace />} />
+          <Route
+            path="/staff/procurement"
+            element={<StaffProcurement toggleTheme={toggleTheme} theme={theme} />}
+          />
+          <Route
+            path="/staff/intelligence"
+            element={<StaffIntelligence toggleTheme={toggleTheme} theme={theme} />}
           />
         </Routes>
       </BrowserRouter>

@@ -1,58 +1,104 @@
-import React, { useState } from "react";
-import "../../App.css";
+import React, { useState, useEffect, useCallback } from "react";
+import DashboardNavbar from "../../components/DashboardNavbar";
+import { getInventoryList } from "../../Api/Api";
 
-const StaffReports = () => {
-  const [loading, setLoading] = useState(false);
-  const [completed, setCompleted] = useState(false);
+function StaffReports({ toggleTheme }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [toastMsg, setToastMsg] = useState("");
 
-  const handleGenerateReport = () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
+    setError("");
+    try {
+      const res = await getInventoryList({ limit: 200 });
+      setRows(res.items || []);
+    } catch (e) {
+      setError(e.message || "Could not load data");
+      setRows([]);
+    } finally {
       setLoading(false);
-      setCompleted(true);
-      setToastMsg("Shift report generated safely.");
-      setTimeout(() => setToastMsg(""), 3000);
-    }, 600);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const downloadCsv = () => {
+    const header = ["name", "sku", "quantity", "price", "category"];
+    const lines = [header.join(",")].concat(
+      rows.map((r) =>
+        [
+          JSON.stringify(r.name || ""),
+          JSON.stringify(r.sku || ""),
+          r.quantity ?? 0,
+          r.price ?? 0,
+          JSON.stringify(r.category || ""),
+        ].join(",")
+      )
+    );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shift-stock-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setToastMsg("CSV downloaded.");
+    setTimeout(() => setToastMsg(""), 3000);
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h3>End of Shift Receipt</h3>
+    <>
+      <DashboardNavbar toggleTheme={toggleTheme} />
+      <div className="container">
+        <div className="card">
+          <h3>End of shift — stock snapshot</h3>
+          <p className="note" style={{ marginBottom: 12 }}>
+            Current shelf file from <code>GET /api/inventory</code>. Export as CSV for your records.
+          </p>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>System</th>
-              <th>Counted</th>
-              <th>Variance</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Milk 500ml</td>
-              <td>15</td>
-              <td>12</td>
-              <td className="numeric">-3</td>
-            </tr>
-          </tbody>
-        </table>
+          {loading && <p>Loading…</p>}
+          {error && <p style={{ color: "var(--danger, #c94c4c)" }}>{error}</p>}
 
-        <div style={{ marginTop: "20px" }}>
-          <button 
-            className={`approve-btn ${loading ? "btn-processing" : ""}`}
-            onClick={handleGenerateReport}
-            disabled={loading || completed}
-          >
-            {completed ? "Receipt Generated ✓" : "Generate Report"}
-          </button>
+          {!loading && !!rows.length && (
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r._id}>
+                    <td>{r.name}</td>
+                    <td>{r.sku}</td>
+                    <td className="numeric">{r.quantity}</td>
+                    <td className="numeric">{r.price}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <div style={{ marginTop: 20 }}>
+            <button type="button" className="approve-btn" onClick={downloadCsv} disabled={loading || !rows.length}>
+              Download CSV report
+            </button>
+            <button type="button" className="ghost-btn" style={{ marginLeft: 10 }} onClick={load} disabled={loading}>
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
       {toastMsg && <div className="toast-notification">{toastMsg}</div>}
-    </div>
+    </>
   );
-};
+}
 
 export default StaffReports;

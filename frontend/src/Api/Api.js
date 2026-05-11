@@ -307,3 +307,65 @@ export const getSalesSuggestions = async () => {
     },
   ];
 };
+
+/* ================= OPERATIONS (inventory, catalog, PO, batches) ================= */
+
+async function parseJsonRes(res) {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      data.message || data.detail || res.statusText || `Request failed (${res.status})`
+    );
+  }
+  return data;
+}
+
+export async function getInventoryList(params = {}) {
+  const q = new URLSearchParams({ page: 1, limit: 100, ...params });
+  const res = await fetch(apiUrl(`/api/inventory?${q}`), { headers: authHeaders() });
+  return parseJsonRes(res);
+}
+
+export async function getProductsList(params = {}) {
+  const q = new URLSearchParams({ page: 1, limit: 100, ...params });
+  const res = await fetch(apiUrl(`/api/products?${q}`), { headers: authHeaders() });
+  return parseJsonRes(res);
+}
+
+export async function updateInventoryItem(id, body) {
+  const res = await fetch(apiUrl(`/api/inventory/${encodeURIComponent(id)}`), {
+    method: "PUT",
+    headers: jsonAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+  return parseJsonRes(res);
+}
+
+export async function getPurchaseOrdersList(params = {}) {
+  const q = new URLSearchParams({ page: 1, limit: 50, ...params });
+  const res = await fetch(apiUrl(`/api/purchase-orders?${q}`), { headers: authHeaders() });
+  return parseJsonRes(res);
+}
+
+export async function createPurchaseOrder(body) {
+  const res = await fetch(apiUrl("/api/purchase-orders"), {
+    method: "POST",
+    headers: jsonAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+  return parseJsonRes(res);
+}
+
+export async function getBatchesList(params = {}) {
+  const q = new URLSearchParams({ page: 1, limit: 100, ...params });
+  const res = await fetch(apiUrl(`/api/batches?${q}`), { headers: authHeaders() });
+  return parseJsonRes(res);
+}
+
+export async function getDashboardSuggestions(storeId = "store_1") {
+  const res = await fetch(
+    apiUrl(`/api/dashboard/suggestions?storeId=${encodeURIComponent(storeId)}`),
+    { headers: authHeaders() }
+  );
+  return parseJsonRes(res);
+}
