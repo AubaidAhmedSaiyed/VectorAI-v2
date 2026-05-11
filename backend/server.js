@@ -10,6 +10,7 @@ const csv        = require('csv-parser');
 const fs         = require('fs');
 const os         = require('os');
 const XLSX       = require('xlsx');
+const PDFDocument = require('pdfkit');
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 const Inventory     = require('./models/Inventory');
@@ -18,6 +19,10 @@ const Product       = require('./models/Product');
 const Batch         = require('./models/Batch');
 const PurchaseOrder = require('./models/PurchaseOrder');
 const PredictionLog = require('./models/PredictionLog');
+const Snapshot        = require('./models/Snapshot');
+const User              = require('./models/User');
+const bcrypt            = require('bcryptjs');
+const { requireAuth, optionalAuth, signToken, authDisabled } = require('./middleware/auth');
 
 // ─── ML Service ───────────────────────────────────────────────────────────────
 const { trainModels, getForecast, healthCheck, predictDemand, predictAccuracy } = require('./services/mlService');
@@ -163,6 +168,59 @@ async function buildMLSalesData(storeId) {
     }));
 }
 
+/** Local Monday 00:00 week bucket key YYYY-MM-DD */
+function weekMondayKey(d) {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7;
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - day);
+  return x.toISOString().slice(0, 10);
+}
+
+async function resolveDashboardChartSku(storeId, skuQuery) {
+  const raw = skuQuery && String(skuQuery).trim();
+  if (raw) {
+    const p = await Product.findOne({ sku: raw }).select('sku').lean();
+    if (p) return p.sku;
+  }
+  const top = await Sale.aggregate([
+    { $match: { storeId } },
+    { $group: { _id: '$product', u: { $sum: '$quantity' } } },
+    { $sort: { u: -1 } },
+    { $limit: 1 },
+  ]);
+  if (!top.length) return null;
+  const pr = await Product.findById(top[0]._id).select('sku').lean();
+  return pr?.sku || null;
+}
+
+async function weeklyRevenueForSku(storeId, sku, numWeeks) {
+  const product = await Product.findOne({ sku }).lean();
+  if (!product) return { product: null, rows: [] };
+  const since = new Date();
+  since.setDate(since.getDate() - (numWeeks + 4) * 7);
+  const sales = await Sale.find({
+    storeId,
+    product: product._id,
+    saleDate: { $gte: since },
+  }).lean();
+  const price = Number(product.sellingPrice) || 0;
+  const map = new Map();
+  for (const s of sales) {
+    const k = weekMondayKey(s.saleDate);
+    map.set(k, (map.get(k) || 0) + s.quantity * price);
+  }
+  const keys = Array.from(map.keys()).sort().slice(-numWeeks);
+  return {
+    product,
+    rows: keys.map((k) => ({
+      week: `Week of ${k}`,
+      weekKey: k,
+      sales: Math.round(map.get(k)),
+    })),
+  };
+}
+
 // Auto-create PO for any product whose stock is at or below reorderPoint
 async function autoCreatePOs(productIds) {
   const products = await Product.find({ _id: { $in: productIds } }).lean();
@@ -219,6 +277,281 @@ app.get('/api/health',(req, res) => res.json({ status: 'ok' }));
 
 
 // ════════════════════════════════════════════════════════════════════════════
+//  AUTH — JWT (set AUTH_DISABLED=true to skip Bearer checks for local tooling)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.post('/api/auth/register', asyncHandler(async (req, res) => {
+  const { email, password, role, name } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ message: 'email and password are required' });
+  const cleanEmail = String(email).trim().toLowerCase();
+  if (password.length < 6)
+    return res.status(400).json({ message: 'password must be at least 6 characters' });
+  const userCount = await User.countDocuments();
+  let r = 'staff';
+  if (userCount === 0) {
+    r = role === 'admin' || role === 'staff' ? role : 'staff';
+  }
+
+  const passwordHash = await bcrypt.hash(String(password), 10);
+  try {
+    const user = await User.create({
+      name: String(name || '').trim(),
+      email: cleanEmail,
+      passwordHash,
+      role: r,
+    });
+    const token = signToken(user);
+    return res.status(201).json({
+      success: true,
+      token,
+      user: { id: user._id, email: user.email, role: user.role, name: user.name },
+    });
+  } catch (err) {
+    if (err.code === 11000)
+      return res.status(409).json({ message: 'An account with this email already exists' });
+    throw err;
+  }
+}));
+
+app.post('/api/auth/login', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ message: 'email and password are required' });
+  const cleanEmail = String(email).trim().toLowerCase();
+  const user = await User.findOne({ email: cleanEmail }).select('+passwordHash');
+  if (!user || !(await bcrypt.compare(String(password), user.passwordHash))) {
+    return res.status(401).json({ message: 'Invalid email or password' });
+  }
+  const token = signToken(user);
+  return res.json({
+    token,
+    user: { id: user._id, email: user.email, role: user.role, name: user.name },
+  });
+}));
+
+app.get('/api/auth/me', optionalAuth, asyncHandler(async (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+  const user = await User.findById(req.user.sub).lean();
+  if (!user) return res.status(401).json({ message: 'User no longer exists' });
+  return res.json({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+  });
+}));
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PRODUCTS — catalog (ML / EOQ source of truth for SKU metadata)
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/products?page=1&limit=20&search=&category=&sku=&lowStock=1
+app.get('/api/products', asyncHandler(async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 20);
+  const skip  = (page - 1) * limit;
+  const filter = {};
+
+  if (req.query.search) {
+    filter.$or = [
+      { name: { $regex: req.query.search, $options: 'i' } },
+      { sku: { $regex: req.query.search, $options: 'i' } },
+    ];
+  }
+  if (req.query.category) filter.category = { $regex: req.query.category, $options: 'i' };
+  if (req.query.sku) filter.sku = String(req.query.sku).trim();
+  if (req.query.lowStock === '1' || req.query.lowStock === 'true') {
+    filter.$expr = { $lte: ['$totalStock', { $ifNull: ['$reorderPoint', 10] }] };
+  }
+
+  const [products, total] = await Promise.all([
+    Product.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+    Product.countDocuments(filter),
+  ]);
+  res.json({ products, total, page, pages: Math.ceil(total / limit) });
+}));
+
+app.get('/api/products/:id', validateObjectId, asyncHandler(async (req, res) => {
+  const p = await Product.findById(req.params.id).lean();
+  if (!p) return res.status(404).json({ message: 'Product not found' });
+  return res.json(p);
+}));
+
+app.post('/api/products', requireAuth, asyncHandler(async (req, res) => {
+  const {
+    name, sku, category, brand,
+    sellingPrice, costPrice, holdingCost,
+    reorderPoint, safetyStock, leadTime, totalStock,
+    syncInventory,
+  } = req.body;
+
+  if (!name || !sku)
+    return res.status(400).json({ message: 'name and sku are required' });
+  if (sellingPrice === undefined || costPrice === undefined)
+    return res.status(400).json({ message: 'sellingPrice and costPrice are required' });
+
+  const ts = parseNum(totalStock, 0);
+  const product = await Product.create({
+    name: String(name).trim(),
+    sku: String(sku).trim(),
+    category: category || '',
+    brand: brand || '',
+    sellingPrice: parseNum(sellingPrice, 0),
+    costPrice: parseNum(costPrice, 0),
+    holdingCost: holdingCost !== undefined ? parseNum(holdingCost, 0.1) : 0.1,
+    reorderPoint: reorderPoint !== undefined ? parseNum(reorderPoint, 10) : 10,
+    safetyStock: safetyStock !== undefined ? parseNum(safetyStock, 5) : 5,
+    leadTime: leadTime !== undefined ? parseNum(leadTime, 2) : 2,
+    totalStock: ts,
+  });
+
+  const shouldSync = syncInventory !== false && ts >= 0;
+  if (shouldSync) {
+    await Inventory.findOneAndUpdate(
+      { sku: product.sku },
+      {
+        $set: {
+          name: product.name,
+          category: product.category || '',
+          price: product.sellingPrice,
+          quantity: ts,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  return res.status(201).json({ message: 'Product created', product });
+}));
+
+app.put('/api/products/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
+  const allowed = [
+    'name', 'sku', 'category', 'brand',
+    'sellingPrice', 'costPrice', 'holdingCost',
+    'reorderPoint', 'safetyStock', 'leadTime', 'totalStock',
+  ];
+  const update = {};
+  for (const k of allowed) {
+    if (req.body[k] !== undefined) {
+      if (k === 'sku' || k === 'name' || k === 'category' || k === 'brand') {
+        update[k] = k === 'sku' || k === 'name' ? String(req.body[k]).trim() : req.body[k];
+      } else {
+        update[k] = parseNum(req.body[k], 0);
+      }
+    }
+  }
+
+  const prev = await Product.findById(req.params.id);
+  if (!prev) return res.status(404).json({ message: 'Product not found' });
+
+  if (update.sku && update.sku !== prev.sku) {
+    const clash = await Product.findOne({ sku: update.sku, _id: { $ne: prev._id } }).lean();
+    if (clash) return res.status(409).json({ message: 'SKU already in use' });
+  }
+
+  const product = await Product.findByIdAndUpdate(req.params.id, update, {
+    new: true,
+    runValidators: true,
+  });
+  if (!product) return res.status(404).json({ message: 'Product not found' });
+
+  if (req.body.syncInventory !== false) {
+    await Inventory.findOneAndUpdate(
+      { sku: prev.sku },
+      { $set: { sku: product.sku, name: product.name, category: product.category, price: product.sellingPrice } }
+    );
+    if (req.body.totalStock !== undefined) {
+      await Inventory.findOneAndUpdate(
+        { sku: product.sku },
+        { $set: { quantity: product.totalStock } }
+      );
+    }
+  }
+
+  return res.json({ message: 'Product updated', product });
+}));
+
+app.delete('/api/products/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
+  const saleCount = await Sale.countDocuments({ product: req.params.id });
+  if (saleCount > 0) {
+    return res.status(409).json({
+      message: 'Cannot delete product with existing sales records',
+      salesCount: saleCount,
+    });
+  }
+  const p = await Product.findByIdAndDelete(req.params.id);
+  if (!p) return res.status(404).json({ message: 'Product not found' });
+  await Inventory.deleteMany({ sku: p.sku });
+  return res.json({ message: 'Product deleted', sku: p.sku });
+}));
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SNAPSHOTS — periodic stock / estimate snapshots
+// ════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/snapshots', asyncHandler(async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 20);
+  const skip  = (page - 1) * limit;
+  const filter = {};
+  if (req.query.from) filter.date = { ...filter.date, $gte: new Date(req.query.from) };
+  if (req.query.to) filter.date = { ...filter.date, $lte: new Date(req.query.to) };
+  if (req.query.sku) {
+    const prod = await Product.findOne({ sku: req.query.sku }).lean();
+    if (prod) filter.product = prod._id;
+    else filter.product = { $in: [] };
+  }
+
+  const [snapshots, total] = await Promise.all([
+    Snapshot.find(filter)
+      .populate('product', 'name sku')
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Snapshot.countDocuments(filter),
+  ]);
+  res.json({ snapshots, total, page, pages: Math.ceil(total / limit) });
+}));
+
+app.get('/api/snapshots/:id', validateObjectId, asyncHandler(async (req, res) => {
+  const s = await Snapshot.findById(req.params.id).populate('product', 'name sku category').lean();
+  if (!s) return res.status(404).json({ message: 'Snapshot not found' });
+  return res.json(s);
+}));
+
+app.post('/api/snapshots', requireAuth, asyncHandler(async (req, res) => {
+  const { productId, sku, date, closingStock, estimatedSales } = req.body;
+  let product;
+  if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+    product = await Product.findById(productId);
+  } else if (sku) {
+    product = await Product.findOne({ sku: String(sku).trim() });
+  }
+  if (!product) return res.status(404).json({ message: 'Product not found (productId or sku)' });
+  if (closingStock === undefined)
+    return res.status(400).json({ message: 'closingStock is required' });
+
+  const snap = await Snapshot.create({
+    product: product._id,
+    date: date ? new Date(date) : new Date(),
+    closingStock: parseNum(closingStock, 0),
+    estimatedSales: estimatedSales !== undefined ? parseNum(estimatedSales, 0) : 0,
+  });
+  return res.status(201).json({ message: 'Snapshot created', snapshot: snap });
+}));
+
+app.delete('/api/snapshots/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
+  const s = await Snapshot.findByIdAndDelete(req.params.id);
+  if (!s) return res.status(404).json({ message: 'Snapshot not found' });
+  return res.json({ message: 'Snapshot deleted' });
+}));
+
+
+// ════════════════════════════════════════════════════════════════════════════
 //  SECTION 1 — INVENTORY ENTRY
 //  Schema: { name, sku, quantity, price, category }
 //  Supports: manual single entry OR CSV/Excel bulk upload
@@ -227,7 +560,7 @@ app.get('/api/health',(req, res) => res.json({ status: 'ok' }));
 
 // ─── GET /api/inventory ───────────────────────────────────────────────────────
 // List all inventory with pagination + search
-// ?page=1&limit=20&search=rice&category=Grains
+// ?page=1&limit=20&search=rice&category=Grains&minPrice=10&maxPrice=500
 app.get('/api/inventory', asyncHandler(async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page)  || 1);
   const limit  = Math.min(100, parseInt(req.query.limit) || 20);
@@ -236,6 +569,11 @@ app.get('/api/inventory', asyncHandler(async (req, res) => {
 
   if (req.query.search)   filter.name     = { $regex: req.query.search, $options: 'i' };
   if (req.query.category) filter.category = { $regex: req.query.category, $options: 'i' };
+
+  const minP = parseNum(req.query.minPrice, NaN);
+  if (Number.isFinite(minP)) filter.price = { ...filter.price, $gte: minP };
+  const maxP = parseNum(req.query.maxPrice, NaN);
+  if (Number.isFinite(maxP)) filter.price = { ...filter.price, $lte: maxP };
 
   const [items, total] = await Promise.all([
     Inventory.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
@@ -256,7 +594,7 @@ app.get('/api/inventory/:id', validateObjectId, asyncHandler(async (req, res) =>
 // MANUAL single inventory entry
 // Body: { name, sku, quantity, price, category }
 // Auto: syncs to Product.totalStock → creates Batch → creates PO if low stock
-app.post('/api/inventory', asyncHandler(async (req, res) => {
+app.post('/api/inventory', requireAuth, asyncHandler(async (req, res) => {
   const { name, sku, quantity, price, category } = req.body;
 
   if (!name || !sku)
@@ -325,7 +663,7 @@ app.post('/api/inventory', asyncHandler(async (req, res) => {
 //   name, sku, quantity, price, category, expiryDate (optional), supplier (optional)
 //
 // Auto: creates Batch per row + PO for any low-stock SKU
-app.post('/api/inventory/upload', upload.single('file'), asyncHandler(async (req, res) => {
+app.post('/api/inventory/upload', requireAuth, upload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file)
     return res.status(400).json({ message: 'File is required. Field name: file' });
 
@@ -431,7 +769,7 @@ app.post('/api/inventory/upload', upload.single('file'), asyncHandler(async (req
 }));
 
 // ─── PUT /api/inventory/:id ───────────────────────────────────────────────────
-app.put('/api/inventory/:id', validateObjectId, asyncHandler(async (req, res) => {
+app.put('/api/inventory/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
   const { name, quantity, price, category } = req.body;
   const update = {};
   if (name     !== undefined) update.name     = name;
@@ -456,7 +794,7 @@ app.put('/api/inventory/:id', validateObjectId, asyncHandler(async (req, res) =>
 }));
 
 // ─── DELETE /api/inventory/:id ────────────────────────────────────────────────
-app.delete('/api/inventory/:id', validateObjectId, asyncHandler(async (req, res) => {
+app.delete('/api/inventory/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
   const deleted = await Inventory.findByIdAndDelete(req.params.id);
   if (!deleted) return res.status(404).json({ message: 'Inventory item not found' });
   return res.json({ message: 'Inventory item deleted' });
@@ -507,7 +845,7 @@ app.get('/api/sales', asyncHandler(async (req, res) => {
 // MANUAL single sale entry
 // Body: { sku OR productId, quantity, saleDate (optional), storeId (optional) }
 // Auto: deducts stock from Inventory + Product → triggers ML training
-app.post('/api/sales', asyncHandler(async (req, res) => {
+app.post('/api/sales', requireAuth, asyncHandler(async (req, res) => {
   const { sku, productId, quantity, saleDate, storeId } = req.body;
 
   if (!quantity || parseNum(quantity) <= 0)
@@ -582,7 +920,7 @@ app.post('/api/sales', asyncHandler(async (req, res) => {
 //   OR: product_name instead of sku (we'll try to match by name)
 //
 // Auto: deducts stock → creates POs → triggers ML training
-app.post('/api/sales/upload', upload.single('file'), asyncHandler(async (req, res) => {
+app.post('/api/sales/upload', requireAuth, upload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file)
     return res.status(400).json({ message: 'File required. Field name: file' });
 
@@ -712,11 +1050,59 @@ app.get('/api/sales/:id', validateObjectId, asyncHandler(async (req, res) => {
   return res.json(sale);
 }));
 
-// ─── DELETE /api/sales/:id ────────────────────────────────────────────────────
-app.delete('/api/sales/:id', validateObjectId, asyncHandler(async (req, res) => {
-  const sale = await Sale.findByIdAndDelete(req.params.id);
+// ─── PUT /api/sales/:id ───────────────────────────────────────────────────────
+// Update saleDate, storeId, and/or quantity (adjusts Product + Inventory by delta; batches unchanged)
+app.put('/api/sales/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
+  const sale = await Sale.findById(req.params.id).populate('product');
   if (!sale) return res.status(404).json({ message: 'Sale not found' });
-  return res.json({ message: 'Sale deleted' });
+
+  const { quantity, saleDate, storeId } = req.body;
+
+  if (quantity !== undefined) {
+    const newQty = parseNum(quantity, NaN);
+    if (!Number.isFinite(newQty) || newQty <= 0) {
+      return res.status(400).json({ message: 'quantity must be a positive number' });
+    }
+    const delta = newQty - sale.quantity;
+    if (delta !== 0) {
+      const product = sale.product;
+      if (!product) return res.status(400).json({ message: 'Sale has no linked product' });
+      product.totalStock = Math.max(0, product.totalStock - delta);
+      await product.save();
+      await Inventory.findOneAndUpdate(
+        { sku: product.sku },
+        { $inc: { quantity: -delta } }
+      );
+      sale.quantity = newQty;
+    }
+  }
+  if (saleDate !== undefined) sale.saleDate = new Date(saleDate);
+  if (storeId !== undefined) sale.storeId = String(storeId).trim() || sale.storeId;
+
+  await sale.save();
+  triggerMLTraining(sale.storeId);
+
+  const populated = await Sale.findById(sale._id).populate('product', 'name sku').lean();
+  return res.json({ message: 'Sale updated', sale: populated });
+}));
+
+// ─── DELETE /api/sales/:id ────────────────────────────────────────────────────
+app.delete('/api/sales/:id', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
+  const sale = await Sale.findById(req.params.id).populate('product');
+  if (!sale) return res.status(404).json({ message: 'Sale not found' });
+
+  const product = sale.product;
+  if (product) {
+    product.totalStock = (product.totalStock || 0) + sale.quantity;
+    await product.save();
+    await Inventory.findOneAndUpdate(
+      { sku: product.sku },
+      { $inc: { quantity: sale.quantity } }
+    );
+  }
+
+  await Sale.deleteOne({ _id: sale._id });
+  return res.json({ message: 'Sale deleted; stock restored to catalog' });
 }));
 
 
@@ -756,7 +1142,7 @@ app.get('/api/purchase-orders/:id', validateObjectId, asyncHandler(async (req, r
 // ─── POST /api/purchase-orders ────────────────────────────────────────────────
 // Manual PO creation
 // Body: { supplier, expectedDate, items: [{ sku, orderedQty, costPerUnit }] }
-app.post('/api/purchase-orders', asyncHandler(async (req, res) => {
+app.post('/api/purchase-orders', requireAuth, asyncHandler(async (req, res) => {
   const { supplier, expectedDate, items } = req.body;
 
   if (!supplier)           return res.status(400).json({ message: 'supplier is required' });
@@ -793,7 +1179,7 @@ app.post('/api/purchase-orders', asyncHandler(async (req, res) => {
 // ─── PUT /api/purchase-orders/:id/receive ─────────────────────────────────────
 // Mark a PO as Received → auto-creates Batches + adds stock to Inventory + Product
 // Body: { items: [{ sku, receivedQty, expiryDate }] }
-app.put('/api/purchase-orders/:id/receive', validateObjectId, asyncHandler(async (req, res) => {
+app.put('/api/purchase-orders/:id/receive', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
   const po = await PurchaseOrder.findById(req.params.id)
     .populate('items.product');
 
@@ -859,7 +1245,7 @@ app.put('/api/purchase-orders/:id/receive', validateObjectId, asyncHandler(async
 }));
 
 // ─── PUT /api/purchase-orders/:id/cancel ──────────────────────────────────────
-app.put('/api/purchase-orders/:id/cancel', validateObjectId, asyncHandler(async (req, res) => {
+app.put('/api/purchase-orders/:id/cancel', requireAuth, validateObjectId, asyncHandler(async (req, res) => {
   const po = await PurchaseOrder.findById(req.params.id);
   if (!po)                      return res.status(404).json({ message: 'Purchase Order not found' });
   if (po.status === 'Received') return res.status(400).json({ message: 'Cannot cancel a received PO' });
@@ -938,7 +1324,7 @@ app.get('/api/ml/preview/:storeId', asyncHandler(async (req, res) => {
 
 // ─── POST /api/ml/train/:storeId ─────────────────────────────────────────────
 // Manually trigger ML training
-app.post('/api/ml/train/:storeId', asyncHandler(async (req, res) => {
+app.post('/api/ml/train/:storeId', requireAuth, asyncHandler(async (req, res) => {
   const { storeId } = req.params;
   const mlData = await buildMLSalesData(storeId);
 
@@ -1122,7 +1508,7 @@ function validatePredictBody(body) {
  * Hold-out backtest: same shape as POST /api/predict + optional holdout_weeks (1–12, default 4).
  * Compares forecast demand to actual demand in the hidden weeks (MAE, RMSE, MAPE %).
  */
-app.post('/api/predict/accuracy', asyncHandler(async (req, res) => {
+app.post('/api/predict/accuracy', requireAuth, asyncHandler(async (req, res) => {
   const validationErrors = validatePredictBody(req.body);
   if (validationErrors.length) {
     return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
@@ -1166,7 +1552,7 @@ app.post('/api/predict/accuracy', asyncHandler(async (req, res) => {
   }
 }));
 
-app.post('/api/predict', asyncHandler(async (req, res) => {
+app.post('/api/predict', requireAuth, asyncHandler(async (req, res) => {
   const validationErrors = validatePredictBody(req.body);
   if (validationErrors.length) {
     console.warn('[Predict] validation failed:', validationErrors);
@@ -1266,6 +1652,415 @@ app.post('/api/predict', asyncHandler(async (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════════════════════
+//  DASHBOARD API — Real-time metrics for admin dashboard
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /api/dashboard/summary ──────────────────────────────────────────────
+// Today's revenue, low stock count, pending orders
+app.get('/api/dashboard/summary', asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+
+  // Today's revenue from sales
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todaySales = await Sale.find({
+    storeId,
+    saleDate: { $gte: today, $lt: tomorrow }
+  }).populate('product', 'sellingPrice').lean();
+
+  const todayRevenue = todaySales.reduce((sum, sale) => {
+    return sum + (sale.quantity * (sale.product?.sellingPrice || 0));
+  }, 0);
+
+  // Low stock items (below reorder point or default 10)
+  const lowStockProducts = await Product.find({
+    $or: [
+      { totalStock: { $lte: 10 } },
+      { $and: [{ reorderPoint: { $exists: true } }, { $expr: { $lte: ['$totalStock', '$reorderPoint'] } }] }
+    ]
+  }).lean();
+
+  // Pending purchase orders
+  const pendingOrders = await PurchaseOrder.countDocuments({ status: 'Pending' });
+
+  // Yesterday's revenue for growth calculation
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayEnd = new Date(today);
+
+  const yesterdaySales = await Sale.find({
+    storeId,
+    saleDate: { $gte: yesterday, $lt: today }
+  }).populate('product', 'sellingPrice').lean();
+
+  const yesterdayRevenue = yesterdaySales.reduce((sum, sale) => {
+    return sum + (sale.quantity * (sale.product?.sellingPrice || 0));
+  }, 0);
+
+  const growthPercent = yesterdayRevenue > 0
+    ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue * 100).toFixed(1)
+    : 0;
+
+  res.json({
+    todayRevenue: Math.round(todayRevenue),
+    revenueGrowth: parseFloat(growthPercent),
+    lowStockCount: lowStockProducts.length,
+    pendingOrders
+  });
+}));
+
+// ─── GET /api/dashboard/analytics ─────────────────────────────────────────────
+// Stock data for analytics chart (recent sales performance)
+app.get('/api/dashboard/analytics', asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+  const days = parseInt(req.query.days) || 30;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const sales = await Sale.find({
+    storeId,
+    saleDate: { $gte: startDate }
+  }).populate('product', 'name sellingPrice costPrice').lean();
+
+  // Group by product for analytics
+  const productMap = new Map();
+
+  sales.forEach(sale => {
+    const product = sale.product;
+    if (!product) return;
+
+    const key = product._id.toString();
+    if (!productMap.has(key)) {
+      productMap.set(key, {
+        name: product.name,
+        sku: product.sku || '',
+        quantity: 0,
+        soldToday: 0,
+        price: product.sellingPrice || 0,
+        cost: product.costPrice || product.sellingPrice || 0
+      });
+    }
+
+    const item = productMap.get(key);
+    item.quantity += sale.quantity;
+  });
+
+  const inventoryItems = await Inventory.find({}).lean();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todaySales = await Sale.find({
+    storeId,
+    saleDate: { $gte: today, $lt: tomorrow }
+  }).populate('product', 'name sku').lean();
+
+  const todaySalesMap = new Map();
+  todaySales.forEach(sale => {
+    const sku = sale.product?.sku;
+    if (sku) {
+      todaySalesMap.set(sku, (todaySalesMap.get(sku) || 0) + sale.quantity);
+    }
+  });
+
+  const analyticsData = Array.from(productMap.values()).map(item => {
+    const inventoryItem = item.sku
+      ? inventoryItems.find(inv => inv.sku === item.sku)
+      : null;
+    const currentStock = inventoryItem ? inventoryItem.quantity : 0;
+
+    return {
+      name: item.name,
+      sku: item.sku,
+      quantity: currentStock,
+      soldToday: todaySalesMap.get(item.sku) || 0,
+      soldPeriod: item.quantity,
+      price: item.price,
+      cost: item.cost
+    };
+  });
+
+  res.json(analyticsData);
+}));
+
+// ─── GET /api/dashboard/suggestions ───────────────────────────────────────────
+// AI-powered suggestions based on inventory and predictions
+app.get('/api/dashboard/suggestions', asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+
+  // Get products with low stock
+  const lowStockProducts = await Product.find({
+    $or: [
+      { totalStock: { $lte: 10 } },
+      { $and: [{ reorderPoint: { $exists: true } }, { $expr: { $lte: ['$totalStock', '$reorderPoint'] } }] }
+    ]
+  }).lean();
+
+  // Get expiring batches (next 7 days)
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 86400000);
+  const expiringBatches = await Batch.find({
+    expiryDate: { $lte: sevenDaysFromNow },
+    status: 'Active',
+    currentQty: { $gt: 0 }
+  }).populate('product', 'name').lean();
+
+  const suggestions = [];
+
+  // Low stock suggestions
+  lowStockProducts.slice(0, 3).forEach(product => {
+    suggestions.push({
+      title: product.name,
+      text: `Stock level is ${product.totalStock} units. Consider reordering.`,
+      type: 'low_stock'
+    });
+  });
+
+  // Expiring stock suggestions
+  expiringBatches.slice(0, 2).forEach(batch => {
+    const daysUntilExpiry = Math.ceil((batch.expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+    suggestions.push({
+      title: batch.product?.name || 'Unknown Product',
+      text: `${batch.currentQty} units expiring in ${daysUntilExpiry} days. Consider discount or promotion.`,
+      type: 'expiring'
+    });
+  });
+
+  // If no specific issues, add general suggestions
+  if (suggestions.length === 0) {
+    suggestions.push({
+      title: 'Inventory Health',
+      text: 'All products are well-stocked. Consider reviewing reorder points.',
+      type: 'general'
+    });
+  }
+
+  res.json(suggestions);
+}));
+
+// ─── GET /api/dashboard/revenue-trend ────────────────────────────────────────
+// Store-wide weekly revenue + profit from Sale lines (no random data)
+// ?storeId=store_1&weeks=8
+app.get('/api/dashboard/revenue-trend', asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+  const weeks = Math.min(52, Math.max(4, parseInt(req.query.weeks, 10) || 8));
+  const since = new Date();
+  since.setDate(since.getDate() - (weeks + 4) * 7);
+
+  const sales = await Sale.find({ storeId, saleDate: { $gte: since } })
+    .populate('product', 'sellingPrice costPrice')
+    .lean();
+
+  const mapRev = new Map();
+  const mapProfit = new Map();
+  for (const s of sales) {
+    const k = weekMondayKey(s.saleDate);
+    const p = s.product;
+    const sp = Number(p?.sellingPrice) || 0;
+    const cp = Number(p?.costPrice) || 0;
+    mapRev.set(k, (mapRev.get(k) || 0) + s.quantity * sp);
+    mapProfit.set(k, (mapProfit.get(k) || 0) + s.quantity * (sp - cp));
+  }
+  const keys = Array.from(mapRev.keys()).sort().slice(-weeks);
+  res.json({
+    labels: keys.map((k) => `Week of ${k}`),
+    revenue: keys.map((k) => Math.round(mapRev.get(k))),
+    profit: keys.map((k) => Math.round(mapProfit.get(k) || 0)),
+  });
+}));
+
+// ─── GET /api/dashboard/sales-chart ───────────────────────────────────────────
+// Historical weekly revenue (₹) for lead SKU from DB + optional ML forecast (₹)
+// ?storeId=store_1&sku=SKU001&histWeeks=8
+app.get('/api/dashboard/sales-chart', asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+  const histWeeks = Math.min(24, Math.max(4, parseInt(req.query.histWeeks, 10) || 8));
+
+  const sku = await resolveDashboardChartSku(storeId, req.query.sku);
+  if (!sku) {
+    return res.json({
+      points: [],
+      sku: null,
+      message: 'No sales in database yet. Run backend seed or record sales.',
+    });
+  }
+
+  const { product, rows: histRows } = await weeklyRevenueForSku(storeId, sku, histWeeks);
+  const points = histRows.map((r) => ({
+    week: r.week,
+    weekKey: r.weekKey,
+    sales: r.sales,
+    predicted: null,
+  }));
+
+  const mlData = await buildMLSalesData(storeId);
+  let forecastMeta = { source: 'none', detail: '' };
+
+  if (mlData.length && product && (await healthCheck())) {
+    try {
+      const result = await getForecast(storeId, sku, mlData);
+      const price = Number(product.sellingPrice) || 0;
+      for (const pt of result.forecast || []) {
+        const wk = pt.week_start != null ? String(pt.week_start).slice(0, 10) : '';
+        points.push({
+          week: wk ? `Forecast ${wk}` : 'Forecast',
+          weekKey: wk,
+          sales: null,
+          predicted: Math.round((Number(pt.forecast) || 0) * price),
+        });
+      }
+      forecastMeta = {
+        source: 'ml',
+        avg_weekly_units: result.eoq_hint?.avg_weekly_demand,
+      };
+    } catch (err) {
+      forecastMeta = {
+        source: 'forecast_unavailable',
+        detail: err.message || 'Train models (POST /api/ml/train) with ML engine running.',
+      };
+    }
+  } else if (!mlData.length) {
+    forecastMeta = { source: 'no_sales', detail: 'No sales rows for this store.' };
+  } else {
+    forecastMeta = {
+      source: 'ml_offline',
+      detail: 'ML engine not reachable — historical chart only.',
+    };
+  }
+
+  return res.json({
+    points,
+    sku,
+    productName: product?.name || null,
+    forecastMeta,
+  });
+}));
+
+// ─── GET /api/dashboard/report.pdf ───────────────────────────────────────────
+// PDF summary for admins (requires JWT unless AUTH_DISABLED)
+app.get('/api/dashboard/report.pdf', requireAuth, asyncHandler(async (req, res) => {
+  const storeId = req.query.storeId || 'store_1';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todaySales = await Sale.find({
+    storeId,
+    saleDate: { $gte: today, $lt: tomorrow },
+  })
+    .populate('product', 'sellingPrice name sku')
+    .lean();
+  const todayRevenue = todaySales.reduce(
+    (sum, s) => sum + s.quantity * (Number(s.product?.sellingPrice) || 0),
+    0
+  );
+
+  const yesterdaySales = await Sale.find({
+    storeId,
+    saleDate: { $gte: yesterday, $lt: today },
+  })
+    .populate('product', 'sellingPrice')
+    .lean();
+  const yesterdayRevenue = yesterdaySales.reduce(
+    (sum, s) => sum + s.quantity * (Number(s.product?.sellingPrice) || 0),
+    0
+  );
+
+  const lowStockProducts = await Product.find({
+    $or: [
+      { totalStock: { $lte: 10 } },
+      { $and: [{ reorderPoint: { $exists: true } }, { $expr: { $lte: ['$totalStock', '$reorderPoint'] } }] },
+    ],
+  })
+    .select('name sku totalStock reorderPoint')
+    .limit(15)
+    .lean();
+
+  const pendingOrders = await PurchaseOrder.countDocuments({ status: 'Pending' });
+
+  const start30 = new Date();
+  start30.setDate(start30.getDate() - 30);
+  const recent = await Sale.find({ storeId, saleDate: { $gte: start30 } })
+    .populate('product', 'name sku sellingPrice')
+    .lean();
+  const bySku = new Map();
+  for (const s of recent) {
+    const sku = s.product?.sku || '?';
+    const name = s.product?.name || sku;
+    const line = s.quantity * (Number(s.product?.sellingPrice) || 0);
+    const cur = bySku.get(sku) || { name, revenue: 0, units: 0 };
+    cur.revenue += line;
+    cur.units += s.quantity;
+    bySku.set(sku, cur);
+  }
+  const topLines = Array.from(bySku.entries())
+    .map(([sku, v]) => ({ sku, ...v }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 8);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="vectorai-report-${storeId}-${today.toISOString().slice(0, 10)}.pdf"`
+  );
+
+  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+  doc.pipe(res);
+
+  doc.fontSize(18).text('VectorAI — Dashboard report', { underline: true });
+  doc.moveDown(0.5);
+  doc.fontSize(10).fillColor('#444').text(`Store: ${storeId}`);
+  doc.text(`Generated: ${new Date().toISOString()}`);
+  doc.moveDown();
+  doc.fillColor('#000');
+
+  doc.fontSize(12).text('Summary', { underline: true });
+  doc.fontSize(11);
+  doc.text(`Today's revenue (approx): INR ${Math.round(todayRevenue).toLocaleString('en-IN')}`);
+  doc.text(`Yesterday's revenue (approx): INR ${Math.round(yesterdayRevenue).toLocaleString('en-IN')}`);
+  doc.text(`Pending purchase orders: ${pendingOrders}`);
+  doc.text(`Low-stock SKUs (catalog): ${lowStockProducts.length}`);
+  doc.moveDown();
+
+  doc.fontSize(12).text('Low stock (sample)', { underline: true });
+  doc.fontSize(10);
+  if (!lowStockProducts.length) doc.text('None flagged.');
+  else {
+    lowStockProducts.forEach((p) => {
+      doc.text(
+        `• ${p.name} (${p.sku}) — stock ${p.totalStock}, reorder at ${p.reorderPoint ?? '—'}`
+      );
+    });
+  }
+  doc.moveDown();
+
+  doc.fontSize(12).text('Top SKUs by revenue (last 30 days)', { underline: true });
+  doc.fontSize(10);
+  if (!topLines.length) doc.text('No sales in the last 30 days.');
+  else {
+    topLines.forEach((row, i) => {
+      doc.text(
+        `${i + 1}. ${row.name} (${row.sku}) — INR ${Math.round(row.revenue).toLocaleString('en-IN')} (${row.units} units)`
+      );
+    });
+  }
+
+  doc.moveDown(1.5);
+  doc.fontSize(9).fillColor('#666').text('Figures are derived from MongoDB sales and product prices. Not financial advice.');
+  doc.end();
+}));
+
+
+// ════════════════════════════════════════════════════════════════════════════
 //  ERROR HANDLER — must always be last
 // ════════════════════════════════════════════════════════════════════════════
 app.use((err, req, res, next) => {
@@ -1289,7 +2084,14 @@ const startServer = async () => {
     console.error('MongoDB connection failed:', err.message);
     throw err;
   }
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    if (authDisabled) {
+      console.log('[Auth] AUTH_DISABLED=true — POST/PUT/DELETE do not require JWT');
+    } else {
+      console.log('[Auth] Mutations require Authorization: Bearer <JWT> (POST /api/auth/login)');
+    }
+  });
 };
 
 startServer().catch(err => {

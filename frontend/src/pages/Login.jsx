@@ -56,7 +56,7 @@ function Login({ toggleTheme }) {
           <h2>Login to Vector AI</h2>
 
           <p className="note" style={{ marginBottom: "12px" }}>
-            <strong>Demo Credentials:</strong><br />
+            <strong>Demo accounts</strong> (create with <code>cd backend && npm run seed</code>):<br />
             Admin → admin@retail.com / admin123<br />
             Staff → staff@retail.com / staff123
           </p>
@@ -87,10 +87,12 @@ function Login({ toggleTheme }) {
 
           <div className="google-login">
             <GoogleLogin
-              onSuccess={(res) => {
+              onSuccess={() => {
                 localStorage.setItem("role", "staff");
-                localStorage.setItem("token", res.credential);
-                navigate("/staff/dashboard");
+                localStorage.removeItem("token");
+                setIsError(false);
+                setToastMsg("Google session is UI-only. Use email login for a backend JWT (writes / ML).");
+                setTimeout(() => navigate("/staff/dashboard"), 800);
               }}
               onError={() => {
                 setIsError(true);

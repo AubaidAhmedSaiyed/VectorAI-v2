@@ -25,7 +25,7 @@ const Signup = ({ toggleTheme }) => {
       const cleanPassword = password.trim();
 
       // ✅ API CALL
-      await registerUser(cleanEmail, cleanPassword, role);
+      await registerUser(cleanEmail, cleanPassword, role, name.trim());
 
       // Successfully registered
       setIsError(false);
@@ -33,8 +33,8 @@ const Signup = ({ toggleTheme }) => {
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       setIsError(true);
-      setToastMsg("Signup failed. Please try again.");
-      setTimeout(() => setToastMsg(""), 3000);
+      setToastMsg(err?.message || "Signup failed. Please try again.");
+      setTimeout(() => setToastMsg(""), 4000);
       setLoading(false);
     }
   };

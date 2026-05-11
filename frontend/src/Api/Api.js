@@ -20,6 +20,51 @@ function apiUrl(path) {
   return root ? `${root}${p}` : p;
 }
 
+/** Bearer token when logged in (add Content-Type for JSON bodies yourself). */
+export function authHeaders(extra = {}) {
+  const headers = { ...extra };
+  try {
+    const token = localStorage.getItem("token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch {
+    /* non-browser */
+  }
+  return headers;
+}
+
+export function jsonAuthHeaders() {
+  return { "Content-Type": "application/json", ...authHeaders() };
+}
+
+/** Dashboard PDF (GET /api/dashboard/report.pdf) — requires JWT unless AUTH_DISABLED on server. */
+export async function downloadDashboardReportPdf(storeId = "store_1") {
+  const url = apiUrl(
+    `/api/dashboard/report.pdf?storeId=${encodeURIComponent(storeId)}`
+  );
+  const res = await fetch(url, { method: "GET", headers: authHeaders() });
+  if (!res.ok) {
+    const text = await res.text();
+    try {
+      const j = JSON.parse(text);
+      throw new Error(j.message || text || `PDF failed (${res.status})`);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        throw new Error(text?.slice(0, 200) || `PDF failed (${res.status}). Log in first.`);
+      }
+      throw e;
+    }
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = `vectorai-report-${storeId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
 /**
  * Demand prediction: Node → Python → MongoDB log (+ optional EOQ / demo economics).
  * @param {{ store_id: string, sku_id: string, data: Array<{date: string, sku_id: string, sales: number}>, ordering_cost?: number, holding_cost?: number, unit_margin?: number }} body
@@ -29,7 +74,7 @@ export const submitPrediction = async (body) => {
   try {
     res = await fetch(apiUrl("/api/predict"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonAuthHeaders(),
       body: JSON.stringify(body),
     });
   } catch (e) {
@@ -66,7 +111,7 @@ export const checkPredictionAccuracy = async (body) => {
   try {
     res = await fetch(apiUrl("/api/predict/accuracy"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonAuthHeaders(),
       body: JSON.stringify(body),
     });
   } catch (e) {
@@ -112,35 +157,47 @@ export const fetchDemandHistoryFromDb = async (storeId, sku) => {
 
 /* ================= AUTH ================= */
 
-// Demo login (email/password)
 export const loginUser = async (email, password) => {
-  if (email === "admin@retail.com" && password === "admin123") {
-    return { role: "admin", token: "demo-admin-token" };
+  let res;
+  try {
+    res = await fetch(apiUrl("/api/auth/login"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch (e) {
+    throw new Error(
+      `${e?.message || "Network error"} — start the backend (cd backend && npm start) and ensure MongoDB is running.`
+    );
   }
-
-  if (email === "staff@retail.com" && password === "staff123") {
-    return { role: "staff", token: "demo-staff-token" };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || "Invalid credentials");
   }
-
-  throw new Error("Invalid credentials");
+  return {
+    role: data.user.role,
+    token: data.token,
+    user: data.user,
+  };
 };
 
-// Register user
-export const registerUser = async (email, password, role) => {
+export const registerUser = async (email, password, role, name = "") => {
+  let res;
   try {
-    const res = await fetch("http://localhost:5000/api/auth/register", {
+    res = await fetch(apiUrl("/api/auth/register"), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password, role }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, role, name }),
     });
-
-    return await res.json();
   } catch (error) {
     console.error(error);
-    return { success: false };
+    throw new Error("Could not reach registration service");
   }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || "Registration failed");
+  }
+  return data;
 };
 
 

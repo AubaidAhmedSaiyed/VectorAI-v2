@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,43 +21,46 @@ ChartJS.register(
   Legend
 );
 
-// ✅ GLOBAL CHART FONT CONFIG (Using CSS variables via JS)
 ChartJS.defaults.font.family = "'Outfit', sans-serif";
 
+const STATIC_LANDING_TREND = {
+  labels: ["W1", "W2", "W3", "W4"],
+  revenue: [10000, 12000, 11500, 13200],
+  profit: [2000, 2600, 2200, 2800],
+};
 
-
-function Analytics({ stock, theme = "dark" }) {
-  // 🔹 Time-based labels (realistic)
-  const labels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
-
-  // 🔹 Base calculations from real stock
-  const totalSales = stock.reduce(
-    (sum, item) => sum + item.soldToday * item.price,
-    0
+function Analytics({ theme = "dark", useLiveData = true }) {
+  const [trend, setTrend] = useState(() =>
+    useLiveData ? { labels: [], revenue: [], profit: [] } : STATIC_LANDING_TREND
   );
+  const [loading, setLoading] = useState(() => !!useLiveData);
+  const [error, setError] = useState("");
 
-  const totalProfit = stock.reduce(
-    (sum, item) =>
-      sum + (item.price - item.cost) * item.soldToday,
-    0
-  );
+  useEffect(() => {
+    if (!useLiveData) return;
 
-  // 🔹 Fake-but-believable trend (this is what real products do)
-  const salesTrend = [
-    totalSales * 0.9,
-    totalSales * 0.95,
-    totalSales * 0.88,
-    totalSales * 1.05,
-    totalSales * 1.02,
-  ];
-
-  const profitTrend = [
-    totalProfit * 0.85,
-    totalProfit * 0.9,
-    totalProfit * 0.82,
-    totalProfit * 1.1,
-    totalProfit * 1.05,
-  ];
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard/revenue-trend?weeks=8&storeId=store_1");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Could not load revenue trend");
+        if (cancelled) return;
+        setTrend({
+          labels: data.labels || [],
+          revenue: data.revenue || [],
+          profit: data.profit || [],
+        });
+      } catch (e) {
+        if (!cancelled) setError(e.message || "Failed to load chart");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useLiveData]);
 
   const hasLight = theme === "light";
   const textColor = hasLight ? "#7a7385" : "#9d948a";
@@ -67,26 +70,26 @@ function Analytics({ stock, theme = "dark" }) {
   const lineSecondary = hasLight ? "#a86056" : "#c9867a";
 
   const data = {
-    labels,
+    labels: trend.labels,
     datasets: [
       {
-        label: "Sales (₹)",
-        data: salesTrend,
+        label: "Revenue (₹)",
+        data: trend.revenue,
         borderColor: linePrimary,
         backgroundColor: hasLight ? "rgba(74, 102, 121, 0.1)" : "rgba(143, 163, 184, 0.12)",
         borderWidth: 2.5,
-        tension: 0.4,
-        pointRadius: 0,
+        tension: 0.35,
+        pointRadius: 3,
         fill: true,
       },
       {
-        label: "Profit (₹)",
-        data: profitTrend,
+        label: "Gross profit (₹)",
+        data: trend.profit,
         borderColor: lineSecondary,
         backgroundColor: hasLight ? "rgba(168, 96, 86, 0.1)" : "rgba(201, 134, 122, 0.1)",
         borderWidth: 2.5,
-        tension: 0.4,
-        pointRadius: 0,
+        tension: 0.35,
+        pointRadius: 3,
         fill: true,
       },
     ],
@@ -99,7 +102,7 @@ function Analytics({ stock, theme = "dark" }) {
       legend: {
         display: true,
         labels: {
-          color: legendColor, // Dynamic
+          color: legendColor,
           usePointStyle: true,
           pointStyle: "line",
           font: {
@@ -123,7 +126,7 @@ function Analytics({ stock, theme = "dark" }) {
         callbacks: {
           label: (ctx) =>
             `${ctx.dataset.label}: ₹ ${Math.round(
-              ctx.raw
+              ctx.raw ?? 0
             ).toLocaleString()}`,
         },
       },
@@ -131,10 +134,12 @@ function Analytics({ stock, theme = "dark" }) {
     scales: {
       x: {
         ticks: {
-          color: textColor, // Dynamic
+          color: textColor,
           font: {
             family: "'Outfit', sans-serif",
           },
+          maxRotation: 45,
+          minRotation: 0,
         },
         grid: {
           display: false,
@@ -142,7 +147,7 @@ function Analytics({ stock, theme = "dark" }) {
       },
       y: {
         ticks: {
-          color: textColor, // Dynamic
+          color: textColor,
           font: {
             family: "'JetBrains Mono', monospace",
             size: 12,
@@ -151,15 +156,46 @@ function Analytics({ stock, theme = "dark" }) {
             `₹${Number(value).toLocaleString()}`,
         },
         grid: {
-          color: gridColor, // Dynamic
+          color: gridColor,
         },
       },
     },
   };
 
+  if (loading) {
+    return (
+      <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", color: textColor }}>
+        Loading revenue from database…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9867a", fontSize: 13 }}>
+        {error}
+      </div>
+    );
+  }
+
+  if (!trend.revenue.length) {
+    return (
+      <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", color: textColor, fontSize: 13 }}>
+        No weekly sales yet for this store. Seed the database or record sales.
+      </div>
+    );
+  }
+
   return (
-    <div style={{ height: "200px" }}>
-      <Line data={data} options={options} />
+    <div style={{ minHeight: "200px" }}>
+      {!useLiveData && (
+        <p style={{ fontSize: 11, color: textColor, margin: "0 0 6px 0", opacity: 0.85 }}>
+          Example curve — open the admin dashboard for live database data.
+        </p>
+      )}
+      <div style={{ height: "200px" }}>
+        <Line data={data} options={options} />
+      </div>
     </div>
   );
 }

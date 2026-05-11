@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -140,7 +140,7 @@ function getRetailerGuidance(prediction, insights, skuDisplay) {
 function Predict({ toggleTheme, theme = "dark" }) {
   const [storeId, setStoreId] = useState("store_1");
   const [skuId, setSkuId] = useState("SKU001");
-  const [dataJson, setDataJson] = useState(SAMPLE_DATA);
+  const [dataJson, setDataJson] = useState("[]");
   const [orderingCost, setOrderingCost] = useState("50");
   const [holdingCost, setHoldingCost] = useState("");
   const [unitMargin, setUnitMargin] = useState("15");
@@ -157,6 +157,23 @@ function Predict({ toggleTheme, theme = "dark" }) {
   const textMuted = isLight ? "#7a7385" : "#9d948a";
   const textMain = isLight ? "#16131a" : "#f4f1ea";
   const gridColor = isLight ? "rgba(15,23,42,0.06)" : "rgba(255,255,255,0.06)";
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchDemandHistoryFromDb("store_1", "SKU001");
+        if (!cancelled && Array.isArray(res.data) && res.data.length) {
+          setDataJson(JSON.stringify(res.data, null, 2));
+        }
+      } catch {
+        /* keep [] until user loads from DB */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const chartOptions = useMemo(
     () => ({
@@ -547,6 +564,14 @@ function Predict({ toggleTheme, theme = "dark" }) {
                 onClick={handleLoadFromMongo}
               >
                 {loadDbLoading ? "Loading from MongoDB…" : "Load history from database"}
+              </button>
+              <button
+                type="button"
+                className="approve-btn"
+                disabled={loading || loadDbLoading}
+                onClick={() => setDataJson(SAMPLE_DATA)}
+              >
+                Insert sample JSON
               </button>
               <button type="submit" className="approve-btn presentation-cta" disabled={loading || loadDbLoading}>
                 {loading ? "Forecasting demand…" : "Forecast demand &amp; shop advice"}

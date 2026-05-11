@@ -119,12 +119,6 @@ function Landing({ toggleTheme, theme }) {
     return () => observer.disconnect();
   }, []);
 
-  /* ===== DEMO STOCK ===== */
-  const demoStock = [
-    { name: "Men Shirt", quantity: 48, soldToday: 12, price: 599, cost: 420 },
-    { name: "Chino Pants", quantity: 32, soldToday: 8, price: 799, cost: 560 },
-  ];
-
   const handleScroll = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -142,7 +136,7 @@ function Landing({ toggleTheme, theme }) {
               </div>
             </div>
             <div style={{ height: "200px", width: "100%", marginTop: "24px" }}>
-              <Analytics stock={demoStock} theme={theme} />
+              <Analytics theme={theme} useLiveData={false} />
             </div>
           </div>
         );

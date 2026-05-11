@@ -21,12 +21,13 @@ ChartJS.register(
   Legend
 );
 
-// ✅ GLOBAL CHART FONT CONFIG
 ChartJS.defaults.font.family = "'Outfit', sans-serif";
 
 function SalesPredictionChart({ theme = "dark", isStatic = false }) {
   const [dataPoints, setDataPoints] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(!isStatic);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     if (isStatic) {
@@ -34,7 +35,7 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
         { week: "Week 1", sales: 1000, predicted: null },
         { week: "Week 2", sales: 1200, predicted: null },
         { week: "Week 3", sales: 1100, predicted: null },
-        { week: "Week 4", sales: 1300, predicted: 1300 }, // Overlap for continuous line styling visual
+        { week: "Week 4", sales: 1300, predicted: 1300 },
         { week: "Week 5", sales: null, predicted: 1400 },
         { week: "Week 6", sales: null, predicted: 1500 },
         { week: "Week 7", sales: null, predicted: 1600 },
@@ -45,31 +46,32 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
     }
 
     const fetchData = async () => {
+      setLoading(true);
+      setNote("");
       try {
-        const response = await fetch("/api/ml/forecast/store_1");
-        if (response.ok) {
-          const result = await response.json();
-          // Assume result format or fallback to dummy if it's missing expected properties
-          if (Array.isArray(result) && result.length > 0) {
-            setDataPoints(result);
-          } else {
-            throw new Error("Invalid format");
-          }
-        } else {
-          throw new Error("Failed to fetch");
+        const response = await fetch("/api/dashboard/sales-chart?storeId=store_1&histWeeks=8");
+        const raw = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(raw.message || "Chart request failed");
+        }
+        const pts = Array.isArray(raw) ? raw : raw.points;
+        if (!Array.isArray(pts)) {
+          setDataPoints([]);
+          setMeta(raw.forecastMeta || null);
+          setNote(raw.message || "Unexpected response shape");
+          return;
+        }
+        setDataPoints(pts);
+        setMeta(raw.forecastMeta || null);
+        if (raw.sku && raw.productName) {
+          setNote(`${raw.productName} (${raw.sku})`);
+        } else if (raw.message) {
+          setNote(raw.message);
         }
       } catch (error) {
-        console.error("Forecast API error, falling back to dummy data:", error);
-        setDataPoints([
-          { week: "Week 1", sales: 1000, predicted: null },
-          { week: "Week 2", sales: 1200, predicted: null },
-          { week: "Week 3", sales: 1100, predicted: null },
-          { week: "Week 4", sales: 1300, predicted: 1300 }, // Overlap to connect lines
-          { week: "Week 5", sales: null, predicted: 1400 },
-          { week: "Week 6", sales: null, predicted: 1500 },
-          { week: "Week 7", sales: null, predicted: 1600 },
-          { week: "Week 8", sales: null, predicted: 1700 }
-        ]);
+        console.error("Sales chart API error:", error);
+        setDataPoints([]);
+        setNote(error.message || "Could not load chart");
       } finally {
         setLoading(false);
       }
@@ -85,14 +87,14 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
   const predictedColor = hasLight ? "#a86056" : "#c9867a";
 
   const labels = dataPoints.map(d => d.week);
-  const actualSales = dataPoints.map(d => d.sales);
-  const predictedSales = dataPoints.map(d => d.predicted);
+  const actualSales = dataPoints.map(d => (d.sales != null ? Number(d.sales) : null));
+  const predictedSales = dataPoints.map(d => (d.predicted != null ? Number(d.predicted) : null));
 
   const data = {
     labels,
     datasets: [
       {
-        label: "Actual Sales (₹)",
+        label: "Actual revenue (₹)",
         data: actualSales,
         borderColor: actualColor,
         backgroundColor: hasLight ? "rgba(74, 102, 121, 0.1)" : "rgba(143, 163, 184, 0.12)",
@@ -100,17 +102,19 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
         tension: 0.4,
         pointRadius: 3,
         fill: true,
+        spanGaps: false,
       },
       {
-        label: "Predicted Sales (₹)",
+        label: "Forecast revenue (₹)",
         data: predictedSales,
         borderColor: predictedColor,
         backgroundColor: hasLight ? "rgba(168, 96, 86, 0.1)" : "rgba(201, 134, 122, 0.1)",
         borderWidth: 2.5,
-        borderDash: [5, 5], // Dashed line for prediction
+        borderDash: [5, 5],
         tension: 0.4,
         pointRadius: 3,
         fill: true,
+        spanGaps: false,
       },
     ],
   };
@@ -143,7 +147,11 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
         titleFont: { family: "'Outfit', sans-serif", size: 12 },
         bodyFont: { family: "'JetBrains Mono', monospace", size: 13 },
         callbacks: {
-          label: (ctx) => `₹ ${ctx.raw ? Math.round(ctx.raw).toLocaleString() : 0}`,
+          label: (ctx) => {
+            const v = ctx.raw;
+            if (v == null || Number.isNaN(v)) return `${ctx.dataset.label}: —`;
+            return `${ctx.dataset.label}: ₹ ${Math.round(v).toLocaleString()}`;
+          },
         },
       },
     },
@@ -151,7 +159,8 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
       x: {
         ticks: {
           color: textColor,
-          font: { family: "'Outfit', sans-serif", size: 11 },
+          font: { family: "'Outfit', sans-serif", size: 10 },
+          maxRotation: 45,
         },
         grid: { display: false },
       },
@@ -169,14 +178,34 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
   if (loading) {
     return (
       <div style={{ height: "100%", minHeight: "200px", display: "flex", alignItems: "center", justifyContent: "center", color: textColor }}>
-        Loading predictions...
+        Loading chart from database…
+      </div>
+    );
+  }
+
+  if (!dataPoints.length) {
+    return (
+      <div style={{ minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: textColor, gap: 8, padding: 12, textAlign: "center" }}>
+        <div>{note || "No sales data for charts yet."}</div>
+        {meta?.detail && (
+          <div style={{ fontSize: 12, opacity: 0.85 }}>{meta.detail}</div>
+        )}
       </div>
     );
   }
 
   return (
-    <div style={{ position: "relative", height: "200px", width: "100%" }}>
-      <Line data={data} options={options} />
+    <div style={{ position: "relative", height: "220px", width: "100%" }}>
+      {(note || meta?.detail) && (
+        <div style={{ fontSize: 11, color: textColor, marginBottom: 6, opacity: 0.9 }}>
+          {note}
+          {meta?.source === "forecast_unavailable" && meta.detail && ` — ${meta.detail}`}
+          {meta?.source === "ml_offline" && ` — ${meta.detail || "ML engine offline"}`}
+        </div>
+      )}
+      <div style={{ height: "200px" }}>
+        <Line data={data} options={options} />
+      </div>
     </div>
   );
 }
