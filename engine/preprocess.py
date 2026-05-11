@@ -25,6 +25,12 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["date", "sales", "sku_id"])        # drop rows with critical NaNs
     df["sales"] = df["sales"].clip(lower=0)                   # no negative sales
 
+    # --- Step 1b: One row per (date, sku_id) — multiple DB sale lines on same day break reindex() ---
+    df = (
+        df.groupby(["date", "sku_id"], as_index=False)["sales"]
+        .sum()
+    )
+
     # --- Step 2: Fill missing dates per SKU ---
     # For each SKU, create a continuous daily date range so there are no gaps
     filled_frames = []

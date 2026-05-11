@@ -419,7 +419,7 @@ app.post('/api/products', requireAuth, asyncHandler(async (req, res) => {
           quantity: ts,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
   }
 
@@ -452,7 +452,7 @@ app.put('/api/products/:id', requireAuth, validateObjectId, asyncHandler(async (
   }
 
   const product = await Product.findByIdAndUpdate(req.params.id, update, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   });
   if (!product) return res.status(404).json({ message: 'Product not found' });
@@ -609,7 +609,7 @@ app.post('/api/inventory', requireAuth, asyncHandler(async (req, res) => {
   const inventory = await Inventory.findOneAndUpdate(
     { sku },
     { $set: { name, category: category || '', price: prc }, $inc: { quantity: qty } },
-    { new: true, upsert: true, runValidators: true }
+    { returnDocument: 'after', upsert: true, runValidators: true }
   );
 
   // ── Sync to Product (for ML + EOQ) ──
@@ -711,7 +711,7 @@ app.post('/api/inventory/upload', requireAuth, upload.single('file'), asyncHandl
           $set: { name: row.name, category: row.category || '', price: prc },
           $inc: { quantity: qty }
         },
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
       );
 
       // Sync to Product
@@ -778,7 +778,7 @@ app.put('/api/inventory/:id', requireAuth, validateObjectId, asyncHandler(async 
   if (quantity !== undefined) update.quantity = parseNum(quantity, 0);
 
   const updated = await Inventory.findByIdAndUpdate(
-    req.params.id, update, { new: true, runValidators: true }
+    req.params.id, update, { returnDocument: 'after', runValidators: true }
   );
   if (!updated) return res.status(404).json({ message: 'Inventory item not found' });
 

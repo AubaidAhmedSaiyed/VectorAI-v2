@@ -89,7 +89,7 @@ async function run() {
     await Product.findOneAndUpdate(
       { sku: row.sku },
       { $set: { ...row, safetyStock: 5, leadTime: 2 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
     await Inventory.findOneAndUpdate(
       { sku: row.sku },
