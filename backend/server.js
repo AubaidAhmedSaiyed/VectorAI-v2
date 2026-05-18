@@ -41,9 +41,9 @@ if (!MONGO_URI) {
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : [
-      'http://localhost:3000',           // Local development
-      'http://127.0.0.1:3000',          // Local development (127.0.0.1)
-      'https://my-vercel-app.vercel.app' // Production Vercel frontend
+      'http://localhost:3000',              // Local development
+      'http://127.0.0.1:3000',              // Local development (127.0.0.1)
+      'https://vector-ai-one-pi.vercel.app' // ✅ Production Vercel frontend
     ];
 
 app.use(cors({
@@ -52,16 +52,18 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] ✅ Accepted origin: ${origin}`);
       return callback(null, true);
     }
     
     // Log rejected origins for debugging
-    console.warn(`[CORS] Rejected origin: ${origin}`);
+    console.warn(`[CORS] ❌ Rejected origin: ${origin}`);
     return callback(new Error('CORS policy: origin not allowed'));
   },
   credentials: true,           // Allow cookies and auth headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,   // For legacy browsers
   maxAge: 86400                // Cache preflight requests for 24 hours
 }));
 
