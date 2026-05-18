@@ -2,7 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardNavbar from "../../components/DashboardNavbar";
 import Analytics from "../../components/Analytics";
 import SalesPredictionChart from "../../components/SalesPredictionChart";
-import { downloadDashboardReportPdf, getDashboardSummary, getDashboardSuggestions } from "../../Api/Api"; // ✅ Import API functions
+import {
+  downloadDashboardReportPdf,
+  getDashboardSummary,
+  getDashboardSuggestions,
+  uploadInventoryCsv,
+} from "../../Api/Api"; // ✅ Import API functions
 
 function AdminDashboard({ toggleTheme }) {
   const [loading, setLoading] = useState(true);
@@ -48,10 +53,8 @@ function AdminDashboard({ toggleTheme }) {
     const t = localStorage.getItem("token");
     if (t) headers.Authorization = `Bearer ${t}`;
     try {
-      const r = await fetch("/api/inventory/upload", { method: "POST", headers, body: fd });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || r.statusText);
-      setUploadMsg(j.message || "Upload complete.");
+      const result = await uploadInventoryCsv(fd);
+      setUploadMsg(result.message || "Upload complete.");
       fetchDashboardData();
     } catch (err) {
       setUploadMsg(err.message || "Upload failed");

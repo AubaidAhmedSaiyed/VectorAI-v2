@@ -1,7 +1,21 @@
 // src/api/api.js
+import axios from "axios";
 
 // 🔹 BASE CONFIG (future backend)
 const BASE_URL = "http://localhost:5000/api"; // future use
+
+const RAW_API_URL = String(import.meta.env.VITE_API_URL || "").trim();
+const API_BASE_URL = RAW_API_URL.replace(/\/$/, "");
+
+export const API = axios.create({
+  baseURL: API_BASE_URL || undefined,
+});
+
+function apiPath(path) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const needsApiPrefix = !API_BASE_URL || !API_BASE_URL.endsWith("/api");
+  return needsApiPrefix ? `/api${normalized}` : normalized;
+}
 
 /**
  * In dev, default to same-origin "" so requests hit Vite's /api proxy (→ Express :5000).
@@ -39,7 +53,7 @@ export function jsonAuthHeaders() {
 /** Dashboard PDF (GET /api/dashboard/report.pdf) — requires JWT unless AUTH_DISABLED on server. */
 export async function downloadDashboardReportPdf(storeId = "store_1") {
   const url = apiUrl(
-    `/api/dashboard/report.pdf?storeId=${encodeURIComponent(storeId)}`
+    apiPath(`/dashboard/report.pdf?storeId=${encodeURIComponent(storeId)}`)
   );
   const res = await fetch(url, { method: "GET", headers: authHeaders() });
   if (!res.ok) {
@@ -72,7 +86,7 @@ export async function downloadDashboardReportPdf(storeId = "store_1") {
 export const submitPrediction = async (body) => {
   let res;
   try {
-    res = await fetch(apiUrl("/api/predict"), {
+    res = await fetch(apiUrl(apiPath("/predict")), {
       method: "POST",
       headers: jsonAuthHeaders(),
       body: JSON.stringify(body),
@@ -109,7 +123,7 @@ export const submitPrediction = async (body) => {
 export const checkPredictionAccuracy = async (body) => {
   let res;
   try {
-    res = await fetch(apiUrl("/api/predict/accuracy"), {
+    res = await fetch(apiUrl(apiPath("/predict/accuracy")), {
       method: "POST",
       headers: jsonAuthHeaders(),
       body: JSON.stringify(body),
@@ -138,7 +152,7 @@ export const fetchDemandHistoryFromDb = async (storeId, sku) => {
   let res;
   try {
     res = await fetch(
-      apiUrl(`/api/predict/history/${encodeURIComponent(String(storeId).trim())}?${q}`),
+      apiUrl(apiPath(`/predict/history/${encodeURIComponent(String(storeId).trim())}?${q}`)),
       { method: "GET" }
     );
   } catch (e) {
@@ -158,46 +172,47 @@ export const fetchDemandHistoryFromDb = async (storeId, sku) => {
 /* ================= AUTH ================= */
 
 export const loginUser = async (email, password) => {
-  let res;
   try {
-    res = await fetch(apiUrl("/api/auth/login"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-  } catch (e) {
-    throw new Error(
-      `${e?.message || "Network error"} — start the backend (cd backend && npm start) and ensure MongoDB is running.`
-    );
+    const res = await API.post(apiPath("/auth/login"), { email, password });
+    return {
+      role: res.data.user.role,
+      token: res.data.token,
+      user: res.data.user,
+    };
+  } catch (error) {
+    const message =
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      error?.message ||
+      "Invalid credentials";
+    throw new Error(message);
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.message || "Invalid credentials");
-  }
-  return {
-    role: data.user.role,
-    token: data.token,
-    user: data.user,
-  };
 };
 
 export const registerUser = async (email, password, role, name = "") => {
-  let res;
   try {
-    res = await fetch(apiUrl("/api/auth/register"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role, name }),
+    const res = await API.post(apiPath("/auth/register"), {
+      email,
+      password,
+      role,
+      name,
     });
+    return res.data;
   } catch (error) {
-    console.error(error);
-    throw new Error("Could not reach registration service");
+    const message =
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      error?.message ||
+      "Registration failed";
+    throw new Error(message);
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.message || "Registration failed");
-  }
-  return data;
+};
+
+export const uploadInventoryCsv = async (formData) => {
+  const res = await API.post(apiPath("/inventory/upload"), formData, {
+    headers: authHeaders(),
+  });
+  return res.data;
 };
 
 
@@ -322,18 +337,18 @@ async function parseJsonRes(res) {
 
 export async function getInventoryList(params = {}) {
   const q = new URLSearchParams({ page: 1, limit: 100, ...params });
-  const res = await fetch(apiUrl(`/api/inventory?${q}`), { headers: authHeaders() });
+  const res = await fetch(apiUrl(apiPath(`/inventory?${q}`)), { headers: authHeaders() });
   return parseJsonRes(res);
 }
 
 export async function getProductsList(params = {}) {
   const q = new URLSearchParams({ page: 1, limit: 100, ...params });
-  const res = await fetch(apiUrl(`/api/products?${q}`), { headers: authHeaders() });
+  const res = await fetch(apiUrl(apiPath(`/products?${q}`)), { headers: authHeaders() });
   return parseJsonRes(res);
 }
 
 export async function updateInventoryItem(id, body) {
-  const res = await fetch(apiUrl(`/api/inventory/${encodeURIComponent(id)}`), {
+  const res = await fetch(apiUrl(apiPath(`/inventory/${encodeURIComponent(id)}`)), {
     method: "PUT",
     headers: jsonAuthHeaders(),
     body: JSON.stringify(body),
@@ -343,12 +358,12 @@ export async function updateInventoryItem(id, body) {
 
 export async function getPurchaseOrdersList(params = {}) {
   const q = new URLSearchParams({ page: 1, limit: 50, ...params });
-  const res = await fetch(apiUrl(`/api/purchase-orders?${q}`), { headers: authHeaders() });
+  const res = await fetch(apiUrl(apiPath(`/purchase-orders?${q}`)), { headers: authHeaders() });
   return parseJsonRes(res);
 }
 
 export async function createPurchaseOrder(body) {
-  const res = await fetch(apiUrl("/api/purchase-orders"), {
+  const res = await fetch(apiUrl(apiPath("/purchase-orders")), {
     method: "POST",
     headers: jsonAuthHeaders(),
     body: JSON.stringify(body),
@@ -358,13 +373,13 @@ export async function createPurchaseOrder(body) {
 
 export async function getBatchesList(params = {}) {
   const q = new URLSearchParams({ page: 1, limit: 100, ...params });
-  const res = await fetch(apiUrl(`/api/batches?${q}`), { headers: authHeaders() });
+  const res = await fetch(apiUrl(apiPath(`/batches?${q}`)), { headers: authHeaders() });
   return parseJsonRes(res);
 }
 
 export async function getDashboardSuggestions(storeId = "store_1") {
   const res = await fetch(
-    apiUrl(`/api/dashboard/suggestions?storeId=${encodeURIComponent(storeId)}`),
+    apiUrl(apiPath(`/dashboard/suggestions?storeId=${encodeURIComponent(storeId)}`)),
     { headers: authHeaders() }
   );
   return parseJsonRes(res);
@@ -378,7 +393,7 @@ export async function getDashboardSuggestions(storeId = "store_1") {
  */
 export async function getRevenueTrend(weeks = 8, storeId = "store_1") {
   const q = new URLSearchParams({ weeks: String(weeks), storeId });
-  const res = await fetch(apiUrl(`/api/dashboard/revenue-trend?${q}`), {
+  const res = await fetch(apiUrl(apiPath(`/dashboard/revenue-trend?${q}`)), {
     headers: authHeaders(),
   });
   return parseJsonRes(res);
@@ -391,7 +406,7 @@ export async function getRevenueTrend(weeks = 8, storeId = "store_1") {
  */
 export async function getSalesChart(storeId = "store_1", histWeeks = 8) {
   const q = new URLSearchParams({ storeId, histWeeks: String(histWeeks) });
-  const res = await fetch(apiUrl(`/api/dashboard/sales-chart?${q}`), {
+  const res = await fetch(apiUrl(apiPath(`/dashboard/sales-chart?${q}`)), {
     headers: authHeaders(),
   });
   return parseJsonRes(res);
@@ -403,7 +418,7 @@ export async function getSalesChart(storeId = "store_1", histWeeks = 8) {
  */
 export async function getDashboardSummary(storeId = "store_1") {
   const q = new URLSearchParams({ storeId });
-  const res = await fetch(apiUrl(`/api/dashboard/summary?${q}`), {
+  const res = await fetch(apiUrl(apiPath(`/dashboard/summary?${q}`)), {
     headers: authHeaders(),
   });
   return parseJsonRes(res);
