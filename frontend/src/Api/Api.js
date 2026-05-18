@@ -369,3 +369,42 @@ export async function getDashboardSuggestions(storeId = "store_1") {
   );
   return parseJsonRes(res);
 }
+
+/**
+ * Get dashboard revenue trend data for the specified period and store.
+ * Returns labels (dates) and revenue/profit values.
+ * @param {number} weeks - Number of weeks to retrieve (default: 8)
+ * @param {string} storeId - Store ID (default: "store_1")
+ */
+export async function getRevenueTrend(weeks = 8, storeId = "store_1") {
+  const q = new URLSearchParams({ weeks: String(weeks), storeId });
+  const res = await fetch(apiUrl(`/api/dashboard/revenue-trend?${q}`), {
+    headers: authHeaders(),
+  });
+  return parseJsonRes(res);
+}
+
+/**
+ * Get sales prediction chart data including historical and forecasted points.
+ * @param {string} storeId - Store ID (default: "store_1")
+ * @param {number} histWeeks - Historical weeks to include (default: 8)
+ */
+export async function getSalesChart(storeId = "store_1", histWeeks = 8) {
+  const q = new URLSearchParams({ storeId, histWeeks: String(histWeeks) });
+  const res = await fetch(apiUrl(`/api/dashboard/sales-chart?${q}`), {
+    headers: authHeaders(),
+  });
+  return parseJsonRes(res);
+}
+
+/**
+ * Get dashboard summary data (inventory, sales, metrics).
+ * @param {string} storeId - Store ID (default: "store_1")
+ */
+export async function getDashboardSummary(storeId = "store_1") {
+  const q = new URLSearchParams({ storeId });
+  const res = await fetch(apiUrl(`/api/dashboard/summary?${q}`), {
+    headers: authHeaders(),
+  });
+  return parseJsonRes(res);
+}

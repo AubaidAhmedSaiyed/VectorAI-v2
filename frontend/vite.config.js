@@ -4,10 +4,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    'process.env': {}, // This provides a fallback for older libraries
+    'process.env': {}, // Provides fallback for older libraries
   },
  
-  // This tells esbuild to treat .js files as JSX
+  // Treat .js files as JSX
   optimizeDeps: {
     esbuildOptions: {
       loader: {
@@ -15,14 +15,20 @@ export default defineConfig({
       },
     },
   },
+
   server: {
     port: 3000,
-    // Browser calls /api/* on the Vite origin; Vite forwards to Express (avoids "fetch failed" when
-    // cross-origin to :5000 is blocked or the wrong host is used).
+    
+    // Development proxy to avoid CORS issues
+    // Browser calls /api/* on Vite origin; Vite forwards to Express backend
+    // This avoids "fetch failed" when backend is on :5000 (different port/host)
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
+        secure: false,
+        // Rewrite /api/... → /api/... (no path modification)
+        pathRewrite: {},
       },
     },
   },

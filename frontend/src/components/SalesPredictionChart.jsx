@@ -10,6 +10,7 @@ import {
   Legend
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { getSalesChart } from "../Api/Api"; // ✅ Import API helper
 
 ChartJS.register(
   CategoryScale,
@@ -49,11 +50,8 @@ function SalesPredictionChart({ theme = "dark", isStatic = false }) {
       setLoading(true);
       setNote("");
       try {
-        const response = await fetch("/api/dashboard/sales-chart?storeId=store_1&histWeeks=8");
-        const raw = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(raw.message || "Chart request failed");
-        }
+        // ✅ Use API helper function instead of hardcoded fetch
+        const raw = await getSalesChart("store_1", 8);
         const pts = Array.isArray(raw) ? raw : raw.points;
         if (!Array.isArray(pts)) {
           setDataPoints([]);

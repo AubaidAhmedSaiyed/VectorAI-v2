@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardNavbar from "../../components/DashboardNavbar";
 import Analytics from "../../components/Analytics";
 import SalesPredictionChart from "../../components/SalesPredictionChart";
-import { downloadDashboardReportPdf } from "../../Api/Api";
+import { downloadDashboardReportPdf, getDashboardSummary, getDashboardSuggestions } from "../../Api/Api"; // ✅ Import API functions
 
 function AdminDashboard({ toggleTheme }) {
   const [loading, setLoading] = useState(true);
@@ -19,20 +19,14 @@ function AdminDashboard({ toggleTheme }) {
   const fileRef = useRef(null);
 
   const fetchDashboardData = useCallback(async () => {
-    const q = "?storeId=store_1";
     try {
-      const [summaryRes, suggestionsRes] = await Promise.all([
-        fetch(`/api/dashboard/summary${q}`),
-        fetch(`/api/dashboard/suggestions${q}`),
+      // ✅ Use API helper functions instead of hardcoded fetch
+      const [summary, suggs] = await Promise.all([
+        getDashboardSummary("store_1"),
+        getDashboardSuggestions("store_1"),
       ]);
-      if (summaryRes.ok) {
-        const summary = await summaryRes.json();
-        setSummaryData(summary);
-      }
-      if (suggestionsRes.ok) {
-        const suggs = await suggestionsRes.json();
-        setSuggestions(suggs);
-      }
+      setSummaryData(summary);
+      setSuggestions(suggs);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {

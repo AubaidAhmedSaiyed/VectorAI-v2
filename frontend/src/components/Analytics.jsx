@@ -10,6 +10,7 @@ import {
   Legend
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { getRevenueTrend } from "../Api/Api"; // ✅ Import API helper
 
 ChartJS.register(
   CategoryScale,
@@ -42,9 +43,8 @@ function Analytics({ theme = "dark", useLiveData = true }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/dashboard/revenue-trend?weeks=8&storeId=store_1");
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || "Could not load revenue trend");
+        // ✅ Use API helper function instead of hardcoded fetch
+        const data = await getRevenueTrend(8, "store_1");
         if (cancelled) return;
         setTrend({
           labels: data.labels || [],

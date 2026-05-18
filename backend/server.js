@@ -37,7 +37,34 @@ if (!MONGO_URI) {
 }
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors());
+// Configure CORS for production (Vercel frontend ↔ Render backend)
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [
+      'http://localhost:3000',           // Local development
+      'http://127.0.0.1:3000',          // Local development (127.0.0.1)
+      'https://my-vercel-app.vercel.app' // Production Vercel frontend
+    ];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log rejected origins for debugging
+    console.warn(`[CORS] Rejected origin: ${origin}`);
+    return callback(new Error('CORS policy: origin not allowed'));
+  },
+  credentials: true,           // Allow cookies and auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400                // Cache preflight requests for 24 hours
+}));
+
 app.use(express.json());
 app.use((req, res, next) => {
   console.log(`[${req.method}] ${req.originalUrl}`);
