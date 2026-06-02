@@ -83,6 +83,7 @@ router.post('/train/:storeId', asyncHandler(async (req, res) => {
 //
 router.get('/forecast/:storeId/:skuId', asyncHandler(async (req, res) => {
   const { storeId, skuId } = req.params;
+  const startTime = Date.now();
   const orderingCost = parseFloat(req.query.ordering_cost) || 50;
   const holdingCost  = parseFloat(req.query.holding_cost)  || 2;
 
@@ -108,7 +109,11 @@ router.get('/forecast/:storeId/:skuId', asyncHandler(async (req, res) => {
     orderingCost,
     holdingCost
   );
+  const duration = Date.now() - startTime;
 
+  console.log(
+    `[ML Forecast Timing] store=${storeId} sku=${skuId} duration=${duration}ms`
+  );
   return res.json({
     store_id:   storeId,
     sku_id:     skuId,
