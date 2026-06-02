@@ -178,3 +178,67 @@ cd backend && node benchmark.js
 ```
 
 Save the output and record in `BASELINE_BENCHMARK.md`!
+
+
+
+node benchmark.js
+
+==============================
+VECTOR AI BENCHMARK v2
+==============================
+
+TEST 4: Health
+Health: 67ms
+
+TEST 1: Single Forecast
+Request 1: 933ms ✓
+Request 2: 787ms ✓
+Request 3: 716ms ✓
+Request 4: 790ms ✓
+Request 5: 732ms ✓
+Stats: { avg: 792, p95: 933, max: 933 }
+
+TEST 2: Load Test (Random SKUs)
+Progress: 50/50
+
+Load Stats: { avg: 756, p95: 950, max: 1504 }
+
+TEST 3: Multi SKU Forecast
+Status: 200
+Time: 6850ms
+Success: true
+
+DONE
+(.venv) 
+
+
+IMPROVED
+
+ node benchmark.js
+
+==============================
+VECTOR AI BENCHMARK v2
+==============================
+
+TEST 4: Health
+Health: 52ms
+
+TEST 1: Single Forecast
+Request 1: 201ms ✓
+Request 2: 196ms ✓
+Request 3: 194ms ✓
+Request 4: 180ms ✓
+Request 5: 194ms ✓
+Stats: { avg: 193, p95: 201, max: 201 }
+
+TEST 2: Load Test (Random SKUs)
+Progress: 50/50
+
+Load Stats: { avg: 166, p95: 209, max: 246 }
+
+TEST 3: Multi SKU Forecast
+Status: 200
+Time: 900ms
+Success: true
+
+DONE

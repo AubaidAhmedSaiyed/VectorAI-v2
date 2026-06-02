@@ -26,6 +26,8 @@ const { requireAuth, optionalAuth, signToken, authDisabled } = require('./middle
 
 // ─── ML Service ───────────────────────────────────────────────────────────────
 const { trainModels, getForecast, healthCheck, predictDemand, predictAccuracy } = require('./services/mlService');
+const cache = require('./services/cache');
+const { default: pLimit } = require('p-limit');
 
 const app       = express();
 const PORT      = Number(process.env.PORT) || 5000;
@@ -1384,30 +1386,40 @@ app.get('/api/ml/forecast/:storeId/:sku', asyncHandler(async (req, res) => {
   const { storeId, sku } = req.params;
   const orderingCost = parseFloat(req.query.ordering_cost) || 50;
 
-  const mlData = await buildMLSalesData(storeId);
-  if (!mlData.length)
-    return res.status(404).json({ message: `No sales data for store "${storeId}"` });
+  // Try cache first
+  const cacheKey = `forecast:${storeId}:${sku}`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return res.json(cached);
 
-  const product     = await Product.findOne({ sku }).lean();
+  // Resolve product and fetch only that product's sales to reduce DB + payload
+  const product = await Product.findOne({ sku }).lean();
+  if (!product) return res.status(404).json({ message: `Product not found for sku "${sku}"` });
+
+  const sales = await Sale.find({ storeId, product: product._id }).select('saleDate quantity -_id').lean();
+  if (!sales.length) return res.status(404).json({ message: `No sales for store "${storeId}" and sku "${sku}"` });
+
+  const mlData = sales.map(s => ({ date: new Date(s.saleDate).toISOString().split('T')[0], sku_id: sku, sales: s.quantity }));
+
+  const result = await cache.getOrSet(cacheKey, async () => getForecast(storeId, sku, mlData));
   const holdingCost = product?.holdingCost || 2;
+  const eoq = computeEOQ(result.eoq_hint.total_4_week_demand, orderingCost, holdingCost);
 
-  const result = await getForecast(storeId, sku, mlData);
-  const eoq    = computeEOQ(result.eoq_hint.total_4_week_demand, orderingCost, holdingCost);
-
-  return res.json({
+  const out = {
     store_id: storeId,
-    sku_id:   sku,
-    product:  product ? { name: product.name, category: product.category, stock: product.totalStock } : null,
+    sku_id: sku,
+    product: { name: product.name, category: product.category, stock: product.totalStock },
     forecast: result.forecast,
     eoq: {
-      value:         eoq,
-      unit:          'units per order',
+      value: eoq,
+      unit: 'units per order',
       ordering_cost: orderingCost,
-      holding_cost:  holdingCost,
+      holding_cost: holdingCost,
       annual_demand: Math.round(result.eoq_hint.total_4_week_demand * 13),
-      avg_weekly:    result.eoq_hint.avg_weekly_demand
+      avg_weekly: result.eoq_hint.avg_weekly_demand
     }
-  });
+  };
+  await cache.set(cacheKey, out);
+  return res.json(out);
 }));
 
 // ─── GET /api/ml/forecast/:storeId ───────────────────────────────────────────
@@ -1419,32 +1431,82 @@ app.get('/api/ml/forecast/:storeId', asyncHandler(async (req, res) => {
   const mlData = await buildMLSalesData(storeId);
   if (!mlData.length)
     return res.status(404).json({ message: `No sales data for store "${storeId}"` });
-
   const skuIds  = [...new Set(mlData.map(r => r.sku_id))];
   const products = await Product.find({ sku: { $in: skuIds } }).lean();
   const prodMap  = {};
   products.forEach(p => { prodMap[p.sku] = p; });
 
-  const allForecasts = [];
-  for (const skuId of skuIds) {
-    try {
-      const result      = await getForecast(storeId, skuId, mlData);
-      const holdingCost = prodMap[skuId]?.holdingCost || 2;
-      const eoq         = computeEOQ(result.eoq_hint.total_4_week_demand, orderingCost, holdingCost);
-      allForecasts.push({
-        sku_id:   skuId,
-        product:  prodMap[skuId] ? { name: prodMap[skuId].name, category: prodMap[skuId].category } : null,
-        forecast: result.forecast,
-        eoq:      { value: eoq, avg_weekly: result.eoq_hint.avg_weekly_demand }
-      });
-    } catch (err) {
-      allForecasts.push({ sku_id: skuId, error: err.message });
-    }
+  // Bucket sales per SKU so we only send the needed subset to ML for each SKU
+  const salesBySku = {};
+  for (const r of mlData) {
+    salesBySku[r.sku_id] = salesBySku[r.sku_id] || [];
+    salesBySku[r.sku_id].push(r);
   }
 
-  return res.json({ store_id: storeId, total_skus: skuIds.length, forecasts: allForecasts });
-}));
+  const limit = pLimit(5); // cap concurrent ML requests to avoid overwhelming engine
+  const tasks = skuIds.map(skuId => limit(async () => {
+    const cacheKey = `forecast:${storeId}:${skuId}`;
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) return cached;
 
+      const payload = salesBySku[skuId] || [];
+      const result = await cache.getOrSet(cacheKey, async () => getForecast(storeId, skuId, payload));
+      const holdingCost = prodMap[skuId]?.holdingCost || 2;
+      const eoq = computeEOQ(result.eoq_hint.total_4_week_demand, orderingCost, holdingCost);
+      const out = {
+        sku_id: skuId,
+        product: prodMap[skuId] ? { name: prodMap[skuId].name, category: prodMap[skuId].category } : null,
+        forecast: result.forecast,
+        eoq: { value: eoq, avg_weekly: result.eoq_hint.avg_weekly_demand }
+      };
+      await cache.set(cacheKey, out);
+      return out;
+    } catch (err) {
+      return { sku_id: skuId, error: err.message };
+    }
+  }));
+  console.log(`Processing ${tasks.length} SKUs`);
+  const allForecasts = await Promise.all(tasks);
+
+  const successfulForecasts = allForecasts.filter(
+    f => !f.error
+  );
+
+  const failedForecasts = allForecasts.filter(
+    f => f.error
+  );
+
+  console.log(
+    `Success: ${successfulForecasts.length}, Failed: ${failedForecasts.length}`
+  );
+
+  if (failedForecasts.length) {
+    console.log('Failed SKUs:');
+    failedForecasts.forEach(f =>
+      console.log(`${f.sku_id}: ${f.error}`)
+    );
+  }
+
+  return res.json({
+    store_id: storeId,
+    total_skus: skuIds.length,
+    successful_forecasts: successfulForecasts.length,
+    failed_forecasts: failedForecasts.length,
+    forecasts: successfulForecasts,
+    failures: failedForecasts
+  });
+
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(
+        `SKU task ${i} failed:`,
+        r.reason?.message || r.reason
+      );
+    }
+  });
+
+  }));
 
 // ════════════════════════════════════════════════════════════════════════════
 //  PREDICT API — Frontend → Node (this route) → Python POST /predict → MongoDB
@@ -1468,6 +1530,7 @@ function aggregateDailyDemandSignals(rows) {
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
 
 // ─── GET /api/predict/history/:storeId?sku=... ─────────────────────────────
 // Pull Sale + Product data from Mongo (same source as CSV / manual sales entry).
@@ -2109,6 +2172,22 @@ const startServer = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log('MongoDB Connected');
+    // Create/ensure useful indexes for faster queries (idempotent)
+    try {
+      const col = mongoose.connection.collection('sales');
+      await col.createIndex({ storeId: 1 });
+      await col.createIndex({ product: 1 });
+      await col.createIndex({ saleDate: 1 });
+      // legacy field names (if existing data uses snake_case)
+      await col.createIndex({ store_id: 1 });
+      await col.createIndex({ sku_id: 1 });
+      await col.createIndex({ date: 1 });
+      console.log('[Mongo] ensured sales indexes');
+    } catch (err) {
+      console.warn('[Mongo] ensure indexes failed:', err.message);
+    }
+    // Initialize Redis (if configured) — best-effort
+    cache.init().catch(err => console.warn('[Redis] init failed', err && err.message));
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
     throw err;

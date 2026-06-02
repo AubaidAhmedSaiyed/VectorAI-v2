@@ -1,9 +1,5 @@
-/**
- * Seed demo users, products, inventory, and sales for local development / QA.
- * Usage: from backend/ → npm run seed
- * Requires MONGO_URI in .env (same as server).
- */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
@@ -23,6 +19,9 @@ async function run() {
   await mongoose.connect(MONGO_URI);
   console.log('Connected to MongoDB');
 
+  // ─────────────────────────────
+  // USERS
+  // ─────────────────────────────
   const adminHash = await bcrypt.hash('admin123', 10);
   const staffHash = await bcrypt.hash('staff123', 10);
 
@@ -38,6 +37,7 @@ async function run() {
     },
     { upsert: true }
   );
+
   await User.findOneAndUpdate(
     { email: 'staff@retail.com' },
     {
@@ -50,47 +50,42 @@ async function run() {
     },
     { upsert: true }
   );
-  console.log('Users: admin@retail.com / admin123, staff@retail.com / staff123');
 
+  console.log('Users seeded');
+
+  // ─────────────────────────────
+  // PRODUCTS (20 SKUs)
+  // ─────────────────────────────
   const catalog = [
-    {
-      name: 'Organic Rice 5kg',
-      sku: 'SKU001',
-      category: 'Grains',
-      sellingPrice: 450,
-      costPrice: 320,
-      holdingCost: 2,
-      reorderPoint: 40,
-      totalStock: 120,
-    },
-    {
-      name: 'Whole Milk 1L',
-      sku: 'SKU002',
-      category: 'Dairy',
-      sellingPrice: 60,
-      costPrice: 48,
-      holdingCost: 0.5,
-      reorderPoint: 30,
-      totalStock: 80,
-    },
-    {
-      name: 'Instant Noodles',
-      sku: 'SKU003',
-      category: 'Snacks',
-      sellingPrice: 20,
-      costPrice: 12,
-      holdingCost: 0.2,
-      reorderPoint: 50,
-      totalStock: 200,
-    },
+    { name:'Organic Rice 5kg', sku:'SKU001', category:'Grains', sellingPrice:450, costPrice:320, holdingCost:2, reorderPoint:40, totalStock:120 },
+    { name:'Whole Milk 1L', sku:'SKU002', category:'Dairy', sellingPrice:60, costPrice:48, holdingCost:0.5, reorderPoint:30, totalStock:80 },
+    { name:'Instant Noodles', sku:'SKU003', category:'Snacks', sellingPrice:20, costPrice:12, holdingCost:0.2, reorderPoint:50, totalStock:200 },
+    { name:'Sugar 1kg', sku:'SKU004', category:'Grocery', sellingPrice:45, costPrice:38, holdingCost:0.3, reorderPoint:60, totalStock:150 },
+    { name:'Salt 1kg', sku:'SKU005', category:'Grocery', sellingPrice:20, costPrice:12, holdingCost:0.2, reorderPoint:70, totalStock:180 },
+    { name:'Sunflower Oil 1L', sku:'SKU006', category:'Oil', sellingPrice:150, costPrice:120, holdingCost:1, reorderPoint:25, totalStock:90 },
+    { name:'Wheat Flour 5kg', sku:'SKU007', category:'Grains', sellingPrice:220, costPrice:180, holdingCost:1.5, reorderPoint:40, totalStock:110 },
+    { name:'Tea Powder 500g', sku:'SKU008', category:'Beverages', sellingPrice:120, costPrice:90, holdingCost:0.8, reorderPoint:35, totalStock:95 },
+    { name:'Coffee Powder 200g', sku:'SKU009', category:'Beverages', sellingPrice:180, costPrice:140, holdingCost:0.9, reorderPoint:20, totalStock:60 },
+    { name:'Biscuits Pack', sku:'SKU010', category:'Snacks', sellingPrice:30, costPrice:20, holdingCost:0.1, reorderPoint:80, totalStock:250 },
+    { name:'Chocolate Bar', sku:'SKU011', category:'Snacks', sellingPrice:50, costPrice:35, holdingCost:0.2, reorderPoint:70, totalStock:200 },
+    { name:'Toothpaste', sku:'SKU012', category:'Hygiene', sellingPrice:60, costPrice:45, holdingCost:0.3, reorderPoint:30, totalStock:120 },
+    { name:'Soap Bar', sku:'SKU013', category:'Hygiene', sellingPrice:25, costPrice:15, holdingCost:0.1, reorderPoint:100, totalStock:300 },
+    { name:'Shampoo 200ml', sku:'SKU014', category:'Hygiene', sellingPrice:110, costPrice:85, holdingCost:0.4, reorderPoint:25, totalStock:80 },
+    { name:'Body Lotion', sku:'SKU015', category:'Hygiene', sellingPrice:140, costPrice:110, holdingCost:0.5, reorderPoint:20, totalStock:70 },
+    { name:'Bread Loaf', sku:'SKU016', category:'Bakery', sellingPrice:40, costPrice:28, holdingCost:0.2, reorderPoint:50, totalStock:100 },
+    { name:'Butter 100g', sku:'SKU017', category:'Dairy', sellingPrice:55, costPrice:42, holdingCost:0.3, reorderPoint:40, totalStock:90 },
+    { name:'Cheese Slices', sku:'SKU018', category:'Dairy', sellingPrice:90, costPrice:70, holdingCost:0.4, reorderPoint:30, totalStock:60 },
+    { name:'Soft Drink 1L', sku:'SKU019', category:'Beverages', sellingPrice:60, costPrice:45, holdingCost:0.3, reorderPoint:60, totalStock:140 },
+    { name:'Mineral Water 1L', sku:'SKU020', category:'Beverages', sellingPrice:20, costPrice:10, holdingCost:0.1, reorderPoint:100, totalStock:400 },
   ];
 
   for (const row of catalog) {
     await Product.findOneAndUpdate(
       { sku: row.sku },
       { $set: { ...row, safetyStock: 5, leadTime: 2 } },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true }
     );
+
     await Inventory.findOneAndUpdate(
       { sku: row.sku },
       {
@@ -105,23 +100,32 @@ async function run() {
       { upsert: true }
     );
   }
-  console.log('Products + inventory upserted (SKU001–SKU003)');
 
-  const products = await Product.find({ sku: { $in: ['SKU001', 'SKU002', 'SKU003'] } }).lean();
-  const bySku = Object.fromEntries(products.map((p) => [p.sku, p]));
+  console.log('Products + Inventory seeded (20 SKUs)');
+
+  // ─────────────────────────────
+  // SALES GENERATION (ML DATA)
+  // ─────────────────────────────
+  const products = await Product.find({ sku: { $in: catalog.map(c => c.sku) } }).lean();
+  const bySku = Object.fromEntries(products.map(p => [p.sku, p]));
 
   const saleCount = await Sale.countDocuments({ storeId: STORE });
-  if (saleCount < 24) {
+
+  if (saleCount < 100) {
     const docs = [];
     const today = new Date();
-    for (let w = 12; w >= 0; w--) {
+
+    for (let w = 20; w >= 0; w--) {
       const d = new Date(today);
       d.setDate(d.getDate() - w * 7);
-      for (const sku of ['SKU001', 'SKU002', 'SKU003']) {
+
+      for (const sku of catalog.map(c => c.sku)) {
         const p = bySku[sku];
         if (!p) continue;
-        const base = sku === 'SKU001' ? 25 : sku === 'SKU002' ? 40 : 55;
-        const qty = base + ((w + sku.charCodeAt(3)) % 9);
+
+        const base = (sku.charCodeAt(3) % 30) + 10;
+        const qty = base + ((w + sku.charCodeAt(3)) % 7);
+
         docs.push({
           product: p._id,
           quantity: qty,
@@ -130,74 +134,17 @@ async function run() {
         });
       }
     }
+
     await Sale.insertMany(docs);
-    console.log(`Inserted ${docs.length} weekly sales rows for ML (${STORE})`);
-  } else {
-    console.log('Sales already present; skipping bulk insert');
+    console.log(`Inserted ${docs.length} sales rows for ML`);
   }
 
-  const recentCount = await Sale.countDocuments({
-    storeId: STORE,
-    saleDate: { $gte: new Date(Date.now() - 2 * 86400000) },
-  });
-  if (recentCount < 4) {
-    const p1 = bySku.SKU001;
-    const p2 = bySku.SKU002;
-    const p3 = bySku.SKU003;
-    const y = new Date();
-    y.setDate(y.getDate() - 1);
-    y.setHours(14, 30, 0, 0);
-    const t = new Date();
-    t.setHours(11, 0, 0, 0);
-    const extra = [];
-    if (p1) extra.push({ product: p1._id, quantity: 10, saleDate: y, storeId: STORE });
-    if (p2) extra.push({ product: p2._id, quantity: 28, saleDate: y, storeId: STORE });
-    if (p1) extra.push({ product: p1._id, quantity: 6, saleDate: t, storeId: STORE });
-    if (p2) extra.push({ product: p2._id, quantity: 35, saleDate: t, storeId: STORE });
-    if (p3) extra.push({ product: p3._id, quantity: 18, saleDate: t, storeId: STORE });
-    if (extra.length) {
-      await Sale.insertMany(extra);
-      console.log(`Inserted ${extra.length} sales for yesterday/today (dashboard revenue)`);
-    }
-  }
+  console.log('Seed complete');
 
-  const mlRows = await Sale.find({ storeId: STORE })
-    .populate('product', 'sku')
-    .lean();
-  const mlData = mlRows
-    .filter((s) => s.product?.sku)
-    .map((s) => ({
-      date: new Date(s.saleDate).toISOString().split('T')[0],
-      sku_id: s.product.sku,
-      sales: s.quantity,
-    }));
-
-  const ML = process.env.ML_ENGINE_URL || 'http://127.0.0.1:8000';
-  try {
-    const health = await fetch(`${ML}/health`, { signal: AbortSignal.timeout(5000) });
-    if (!health.ok) throw new Error(`health ${health.status}`);
-    const trainRes = await fetch(`${ML}/train/${encodeURIComponent(STORE)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: mlData }),
-      signal: AbortSignal.timeout(180000),
-    });
-    const trainJson = await trainRes.json().catch(() => ({}));
-    if (!trainRes.ok) {
-      console.warn('[seed] ML train failed:', trainRes.status, trainJson);
-    } else {
-      console.log('[seed] ML train summary:', trainJson.summary || trainJson);
-    }
-  } catch (e) {
-    console.log('[seed] ML train skipped (optional):', e.message);
-    console.log('      Start the Python engine on port 8000, then: POST /api/ml/train/store_1 with auth');
-  }
-
-  console.log('\nDone. For curl without a JWT, set AUTH_DISABLED=true in backend/.env');
   await mongoose.disconnect();
 }
 
-run().catch((e) => {
-  console.error(e);
+run().catch(err => {
+  console.error(err);
   process.exit(1);
 });
