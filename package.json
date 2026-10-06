@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "postinstall": "cd backend && npm install",
+    "start": "cd backend && npm start"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "redis": "^6.0.0"

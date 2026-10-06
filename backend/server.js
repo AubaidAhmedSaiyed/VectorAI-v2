@@ -2169,42 +2169,51 @@ app.use((err, req, res, next) => {
 //  START
 // ════════════════════════════════════════════════════════════════════════════
 const startServer = async () => {
-  try {
-    await mongoose.connect(MONGO_URI);
-    console.log('MongoDB Connected');
-    // Create/ensure useful indexes for faster queries (idempotent)
+  if (mongoose.connection.readyState >= 1) {
+    console.log('MongoDB already connected');
+  } else {
     try {
-      const col = mongoose.connection.collection('sales');
-      await col.createIndex({ storeId: 1 });
-      await col.createIndex({ product: 1 });
-      await col.createIndex({ saleDate: 1 });
-      // legacy field names (if existing data uses snake_case)
-      await col.createIndex({ store_id: 1 });
-      await col.createIndex({ sku_id: 1 });
-      await col.createIndex({ date: 1 });
-      console.log('[Mongo] ensured sales indexes');
+      await mongoose.connect(MONGO_URI);
+      console.log('MongoDB Connected');
+      // Create/ensure useful indexes for faster queries (idempotent)
+      try {
+        const col = mongoose.connection.collection('sales');
+        await col.createIndex({ storeId: 1 });
+        await col.createIndex({ product: 1 });
+        await col.createIndex({ saleDate: 1 });
+        // legacy field names (if existing data uses snake_case)
+        await col.createIndex({ store_id: 1 });
+        await col.createIndex({ sku_id: 1 });
+        await col.createIndex({ date: 1 });
+        console.log('[Mongo] ensured sales indexes');
+      } catch (err) {
+        console.warn('[Mongo] ensure indexes failed:', err.message);
+      }
+      // Initialize Redis (if configured) — best-effort
+      cache.init().catch(err => console.warn('[Redis] init failed', err && err.message));
     } catch (err) {
-      console.warn('[Mongo] ensure indexes failed:', err.message);
+      console.error('MongoDB connection failed:', err.message);
+      throw err;
     }
-    // Initialize Redis (if configured) — best-effort
-    cache.init().catch(err => console.warn('[Redis] init failed', err && err.message));
-  } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
-    throw err;
   }
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    if (authDisabled) {
-      console.log('[Auth] AUTH_DISABLED=true — POST/PUT/DELETE do not require JWT');
-    } else {
-      console.log('[Auth] Mutations require Authorization: Bearer <JWT> (POST /api/auth/login)');
-    }
-  });
+  
+  if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      if (authDisabled) {
+        console.log('[Auth] AUTH_DISABLED=true — POST/PUT/DELETE do not require JWT');
+      } else {
+        console.log('[Auth] Mutations require Authorization: Bearer <JWT> (POST /api/auth/login)');
+      }
+    });
+  }
 };
 
 startServer().catch(err => {
   console.error('Failed to start server:', err);
-  process.exit(1);
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 });
 
 module.exports = app;
